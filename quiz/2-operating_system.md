@@ -13,4 +13,4 @@
 - 병렬성은 CPU 코어가 여러개인 컴퓨터에서 실제로 여러 프로그램이 동시에 실행됨 , 시스템 콜과 서브 프로세스를 이용하여 병렬성 코드 작성 가능
 
 #### References
-- [동시성과 병렬성]('https://github.com/kyungmin1212/quiz_study/blob/main/study/1-python_study.md/#1')
+- [동시성과 병렬성](https://github.com/kyungmin1212/quiz_study/blob/main/study/1-python_study.md/#1)
