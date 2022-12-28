@@ -2,8 +2,16 @@
 
 - [클래스(class), 객체(object), 인스턴스(instance), 어트리뷰트(attribute) 용어 설명](#1)
 - [`__str__`과 `__repr__` 의 차이점](#2)
-- [subprocess(자식프로세스 관리)](#100)
-- [](#2)
+- [`__dict__` 와 `dir()` 의 차이점](#3)
+- [`__doc__`](#4)
+- [클래스 변수와 인스턴스 변수](#5)
+- [`__init__`과 `__del__`](#6)
+- [@classmethod 와 @staticmethod](#7)
+- [다양한 special method (= magic method)](#8)
+- [](#)
+- [](#)
+- [](#)
+- [](#)
 
 ---
 
@@ -379,7 +387,7 @@
 
 ## #8
 
-### special method (= magic method)
+### 다양한 special method (= magic method)
 
 - `__(메서드 이름)__` 이런 형태를 special method라고 함
 - 파이썬이 내부적으로 구현된(빌트인) 메서드를 구현함
@@ -675,9 +683,3 @@
         ```
 
 ---
-
-## #
-
-### 
-
-#### References
