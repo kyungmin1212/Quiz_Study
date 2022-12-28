@@ -19,7 +19,7 @@
     - **시스템 콜(system call)**, **하위 프로세스(sub process)**, C 확장(extension)을 사용해 작업을 병렬로 수행가능
 
 #### References
-- 파이썬 코딩의 기술
+- [파이썬 코딩의 기술(개정2판)](http://www.yes24.com/Product/Goods/94197582)
 
 ---
 
