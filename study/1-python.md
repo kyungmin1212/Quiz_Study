@@ -482,6 +482,767 @@
 
 ---
 
+## #9
+
+### namedtuple
+
+- tuple을 딕셔너리처럼 키를 지정해서 사용가능
+- 다양한 선언 방법이 존재
+- 코드
+    ```python
+    # 네임드 튜플 사용
+    from collections import namedtuple
+
+    # 네임드 튜플 선언 방법
+    Point1 = namedtuple('Point', ['x', 'y'])
+    Point2 = namedtuple('Point', 'x, y')
+    Point3 = namedtuple('Point', 'x y')
+    Point4 = namedtuple('Point', 'x y x class', rename=True) # Default=False 변수명이 같은 경우 rename=True로 지정하게되면 오류없이 변수이름이 수정됨
+
+
+    # 출력
+    print(Point1, Point2, Point3, Point4)
+
+    # Dict to Unpacking
+    temp_dict = {'x': 75, 'y': 55}
+    temp = [52, 38]
+
+    p1 = Point1(x=10, y=35)
+    p2 = Point2(20, 40)
+    p3 = Point3(45, y=20)
+    p4 = Point4(10, 20, 30, 40)
+    p5 = Point3(**temp_dict)
+    p6 = Point3(*temp)
+
+    print(p1, p2, p3, p4, p5, p6)
+
+    '''
+    <class '__main__.Point'> <class '__main__.Point'> <class '__main__.Point'> <class '__main__.Point'>
+    Point(x=10, y=35) Point(x=20, y=40) Point(x=45, y=20) Point(x=10, y=20, _2=30, _3=40) Point(x=75, y=55) Point(x=52, y=38)
+    '''
+    ```
+
+####
+- [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
+
+---
+
+## #10
+
+### generator
+
+- generator 란 iterator 를 생성해주는 함수, 함수안에 yield 키워드 사용
+- 무한한 순서가 있는 객체를 모델링 가능
+- yield 예시
+    ```python
+    def test_generator():
+        print('yield 1 전')
+        yield 1
+        print('yield 1과 2사이')
+        yield 2
+        print('yield 2와 3사이')
+        yield 3
+        print('yield 3 후')
+
+    g = test_generator()
+    next(g)
+    next(g)
+    next(g)
+    next(g)
+    '''
+    yield 1 전
+    yield 1과 2사이
+    yield 2와 3사이
+    yield 3 후
+
+    StopIteration 발생
+    '''
+
+    ```
+    (다음 4번째 next(g)를 실행할때 다음 yield가 있는지 코드를 더 내려갔는데('yield 3 후' 까지 출력) yield가 더이상 없고 함수가 끝났으므로 오류발생)
+- 무한한 순서 있는 객체 예시
+    ```python
+    def infinite_generator():
+        count = 0
+        while True:
+            count+=1
+            yield print(count)
+
+    g = infinite_generator()
+    next(g)
+    next(g)
+    next(g)
+    next(g)
+    next(g)
+    next(g)
+    next(g)
+    '''
+    1
+    2
+    3
+    4
+    5
+    6
+    7
+    '''
+    ```
+- iterable한 객체를 yield할 때는 yield from iterable객체 사용
+    ```python
+    def three_generator():
+        a = [1, 2, 3]
+        yield from a
+
+    gen = three_generator()
+    print(next(gen))
+    print(next(gen))
+    print(list(gen))
+    print(next(gen))
+    '''
+    1
+    2
+    [3]
+
+    StopIteration 발생
+    '''
+    ```
+    (list로 묶어서 한번에 나오면 모든 yield가 다 나오게됨. 따라서 list로 모두 꺼낸후 next를 실행하게 되면 오류발생)
+- 리스트 컴프리헨션 방식을 ( )로 묶어주면 generator가 됨
+    ```python
+    a = (i for i in [10,20,30] if i>=20)
+    print(a)
+    print(next(a))
+    print(next(a))
+    print(next(a))
+    '''
+    <generator object <genexpr> at 0x0000017E62DA0350>
+    20
+    30
+
+    StopIteration 발생
+    '''
+
+    ```
+#### References
+- https://wikidocs.net/16069
+
+---
+
+## #11
+
+### 위치 인자와 키워드 인자의 패킹(packing)과 언패킹(unpacking)
+- 간단한 예시
+    ```python
+    a_list = [1,2,3,4,5]
+
+    a, *b, c = a_list
+    print(a,*b,c)
+    print(a,b,c)
+    '''
+    1 2 3 4 5
+    1 [2, 3, 4] 5
+    '''
+    ```
+    - b변수 앞에 *를 붙여주게 되면 b가 리스트로 인식됨.)
+        - (참고 : **를 두개 붙여주면 딕셔너리로 인식됨, 이 때는 키값이 필요)
+    - 2,3,4 원소를 b로 packing된것)
+    - 리스트 b 앞에 *를 붙여서 줄력하게 되면 리스트 b가 unpacking되어서 출력됨)    
+- packing은 인자로 받은 여러개의 값을 하나의 객체로 합쳐서 받을 수 있도록 함
+    - 함수에서 여러값을 길이 제한없이 받고 싶을 경우 사용
+    - 위치 인자 패킹 (* 사용)
+        ```python
+        def sum_all(*numbers):
+            result = 0
+            for number in numbers:
+                result += number
+            return result
+
+        print(sum_all(1, 2, 3)) # 6
+        print(sum_all(1, 2, 3, 4, 5, 6)) # 21
+        '''
+        6
+        21
+        '''
+        ```
+        (숫자를 나열해서 전달하게 되면 numbers라는 list로 묶여서 함수안에서 실행됨)    
+    - 키워드 인자 패킹 (** 사용)
+        ```python
+        def print_family_name(father, mother, **sibling):
+            print("아버지 :", father)
+            print("어머니 :", mother)
+            if sibling:
+                print("호적 메이트..")
+                for title, name in sibling.items():
+                    print('{} : {}'.format(title, name))
+
+        print_family_name("홍길동", '심사임당', 누나='김태희', 여동생='윤아')
+        '''
+        아버지 : 홍길동
+        어머니 : 심사임당
+        호적 메이트..
+        누나 : 김태희
+        여동생 : 윤아
+        '''
+        ```
+        (키워드를 지정해서 넘겨주게 되면 sibling이라는 dictionary로 묶어서 함수안에서 실행됨)
+    - 위치 인자와 키워드 인자 패킹 동시 사용
+        ```python
+        def print_family_name(*args, **kwargs):
+            if args:
+                for name in args:
+                    print(name)
+            else:
+                print('가족 이름 데이터가 존재하지 않습니다.')
+            
+            if kwargs:
+                for k,v in kwargs.items():
+                    print(f'{k}의 이름은 {v}')
+
+        print_family_name('홍길동','신사임당',여자친구='아이유',친구='김태희')
+        print()
+        print_family_name(여자친구='아이유',친구='김태희')
+        '''
+        홍길동
+        신사임당
+        여자친구의 이름은 아이유
+        친구의 이름은 김태희
+
+        가족 이름 데이터가 존재하지 않습니다.
+        여자친구의 이름은 아이유
+        친구의 이름은 김태희
+        '''
+        ```
+        (키워드 인자와 위치 인자를 바꿔서 작성하면 오류 발생)
+        ```python
+        print_family_name(여자친구='아이유',친구='김태희','홍길동','신사임당')
+        '''
+        SyntaxError: positional argument follows keyword argument
+        '''
+        ```
+- unpacking은 여러개의 객체를 포함하고 있는 하나의 객체를 풀어줌
+    - 리스트를 unpacking 하는 경우는 *, 딕셔너리 unpacking하는 경우 **를 사용
+
+    - 리스트 unpacking
+        ```python
+        a_list = [1,2,3,4]
+
+        a,b,c,d = *a_list
+        print(a,b,c,d)
+        '''
+        SyntaxError: can't use starred expression here
+        '''
+        ```
+        - 이런식의 언패킹은 *가 없더라도 동작하는 코드이기때문에 사용안함(오류도 발생함)
+        - 함수에 매개변수가 여러개일경우 리스트를 함수의 입력인자로 주고싶을때 함수(*리스트) 로 사용
+            ```python
+            a_list = [1,2,3,4]
+
+            def sum(a,b,c,d):
+                return a+b+c+d
+
+            print(sum(*a_list))
+            '''
+            10
+            '''
+            ```
+    - 딕셔너리 unpacking
+        - 리스트와 마찬가지로 딕셔너리로 함수의 입력인자로 넣어줄때 사용
+            ```python
+            a_dict={'a':1,'b':2,'c':3}
+
+            def sum(a,b,c):
+                return a+b+c
+
+            print(sum(**a_dict))
+            '''
+            6
+            '''
+            ```
+            (a_dict의 키값이 함수의 매개변수와 동일해야지 함수에 입력인자로 사용 가능)
+
+
+
+#### References
+- https://wikidocs.net/22801
+
+---
+
+## #12
+
+### filter, map
+
+- map과 filter 모두 첫 번째 인자에 함수, 두 번째 인자에 리스트나 딕셔너리와 같은 iterable 한 데이터를 인자로 받음(리스트의 경우 key값이 함수의 인자로 들어감)
+- mapr과 filter 모두 iterable한 데이터들을 함수에 넣어 generator를 반환
+- map은 함수에 값을 집어넣어 함수에서 return 값들을 반환
+- filter는 함수에 값을 집어넣어 조건식에 맞는 값들만 return
+- map과 filter 비교 코드
+    ```python
+    a=[1,2,3,4,5]
+
+    def map_func(num):
+        return num*100
+
+    def filter_func(num):
+        return num*100>=300
+
+    print(list(map(map_func,a)))
+    print(list(filter(filter_func,a)))
+    '''
+    [100, 200, 300, 400, 500]
+    [3, 4, 5]
+    '''
+    ```
+- map과 filter의 사용예시
+    ```python
+    a=[1,2,3,4,5]
+
+    def map_func(num):
+        return num*100
+
+    def filter_func(num):
+        return num>=300
+
+    print(list(filter(filter_func,map(map_func,a))))
+    '''
+    [300, 400, 500]
+    '''
+    ```
+#### References
+- [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
+
+---
+
+## #13
+
+### reduce, partial
+
+- reduce와 partial 모두 functools 안에 존재
+- reduce는 누적 연산
+    - 예시
+        ```python
+        from functools import reduce
+
+        def sum_func(a,b):
+            return a+b
+
+        print(reduce(sum_func, range(1,11))) # 누적 
+        # 1+2+~10 -> 3+3+4+5+~+10 -> 6+4+5+~+10 -> 45+10 -> 55
+        # (((((((((1+2)+3)+4)+5)+6)+7)+8)+9)+10)
+        '''
+        55
+        '''
+        ```
+- parital은 인수 고정
+    - 예시
+        ```python
+        from functools import partial
+
+        def calculate(a,b,c,d):
+            return a*(b+1)*(c+2)*(d+3)
+
+        two = partial(calculate,2) # 제일 앞에 인자에 고정됨
+
+        print(two(9,8,7))
+
+        two_three = partial(two,9) # two 함수의 매개변수는 (b,c,d) 로줄어듬, 그 중 제일 앞에 b를 9로 고정
+        print(two_three(8,7))
+        '''
+        2000
+        2000
+        '''
+        ```
+    - 기존 함수를 이용하여 새로운 함수를 파생시킬경우 유용
+        ```python
+        from functools import partial
+
+        def add_mul(choice, *args):
+            if choice == "add":
+                result = 0
+                for i in args:
+                    result = result + i
+            elif choice == "mul":
+                result = 1
+                for i in args:
+                    result = result * i
+            return result
+
+        add = partial(add_mul, 'add')
+        mul = partial(add_mul, 'mul')
+
+        print(add(1,2,3,4,5))  # 15 출력
+        print(mul(1,2,3,4,5))  # 120 출력
+        '''
+        15
+        120
+        '''
+        ```
+
+#### References
+- [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
+- https://wikidocs.net/109304
+
+---
+
+## #14
+
+### global, local, nonlocal
+- global은 전역변수, local은 지역변수 의미
+- 전역변수와 지역변수 살펴보기
+    - 예시 1 (함수안에서 전역 변수값은 변경하지 않고 출력이나 이용하는 경우)
+        ```python
+        a = 10
+
+        def a_func():
+            print(a)
+            
+        a_func()
+        '''
+        10
+        '''
+        ```
+        ```python
+        a = 10
+
+        def a_func():
+            b = a+1
+            print(b)
+            
+        a_func()
+        '''
+        11
+        '''
+        ```
+    - 예시 2 (함수안에서 전역 변수랑 동일한 변수명을 선언하는 경우)
+        ```python
+        a = 10
+
+        def a_func():
+            a = 20
+            print(f'a_func안에서의 a값 : {a}')
+            
+        a_func()
+        print(f'a_func밖에서의 a값 : {a}')
+        '''
+        a_func안에서의 a값 : 20
+        a_func밖에서의 a값 : 10
+        '''
+        ```
+    - 예시 3 (함수안에서 전역 변수값을 이용하여 동일한 변수명을 선언하는 경우)
+        ```python
+        a = 10
+
+        def a_func():
+            a = a+10
+            print(f'a_func안에서의 a값 : {a}')
+            
+        a_func()
+        print(f'a_func밖에서의 a값 : {a}')
+        '''
+        (a = a+10 에서 오류발생)
+        UnboundLocalError: local variable 'a' referenced before assignment
+        '''
+        ```
+    - 정리
+        - 예시 1의 경우를 살펴보면 함수 내에서 전역 변수값을 출력하거나 이용하는데에는 아무런 문제가 없음.
+        - 예시 2의 경우를 살펴보면 함수 내에서 전역 변수명과 동일한 지역 변수명을 선언해도 아무런 상관없음. (단, 함수가 끝나면 지역변수로 사용되었던 변수는 사라짐)
+        - 예시 3의 경우를 살펴보면 함수 내에서 전역 변수값을 이용하여 전역변수명과 동일한 지역변수명을 사용하였는데 이런 경우는 실행 불가 (즉, 예시 1과 예시 2는 가능하지만 예시 1과 예시 2를 섞은 예시 3은 실행 불가)
+- global을 통해 함수내에서 전역변수 값 변경해주기
+    - 전역변수 사용 예시에서 전역 변수명과 동일한 지역 변수명을 선언했던 함수의 예시(예시 2와 예시 3)에서 global 선언해보기
+        ```python
+        a = 10
+
+        def a_func():
+            global a
+            a = 20
+            print(f'a_func안에서의 a값 : {a}')
+            
+        a_func()
+        print(f'a_func밖에서의 a값 : {a}')
+        '''
+        20
+        20
+        '''
+        ```
+        ```python
+        a = 10
+
+        def a_func():
+            global a
+            a = a+10
+            print(f'a_func안에서의 a값 : {a}')
+            
+        a_func()
+        print(f'a_func밖에서의 a값 : {a}')
+        '''
+        20
+        20
+        '''
+        ```
+    - 위 예시를 보게되면 함수내에서 `global 전역변수명` 을 선언해주게 되면 함수내에서 전역변수를 변경시킬수 있다는 것을 알수있음
+- nonlocal 사용하기
+    - nonlocal은 함수내에서 선언한 지역변수명을 그 함수 내부의 함수에서 사용하고 싶을 경우 선언
+    - nonlocal이 적용이 안되는 경우
+        ```python
+        a = 10
+
+        def a_func():
+            nonlocal a
+            a = a+10
+            print(f'a_func안에서의 a값 : {a}')
+            
+        a_func()
+        print(f'a_func밖에서의 a값 : {a}')
+        '''
+        SyntaxError: no binding for nonlocal 'a' found
+        '''
+        ```
+        (nonlocal은 함수내의 지역변수를 함수내부의 함수에서 사용하고 싶을 경우 사용)
+    
+    - nonlocal이 적용되는 경우
+        ```python
+        a=10
+
+        def a_func():
+            a = 20
+            def b_func():
+                nonlocal a
+                a = a+10 # nonlocal을 통해 b_func 바로 바깥 함수인 a_func의 지역변수 a 변경
+                print(f'b_func안에서의 a값 : {a}') # 30
+            b_func()
+            print(f'b_func밖에서의 a값 : {a}') # 30
+            
+        a_func()
+        print(f'a_func밖에서의 a값 : {a}') # 10 (a_func의 지역변수인 a는 지역변수로서 의미가 있음)
+        '''
+        b_func안에서의 a값 : 30
+        b_func밖에서의 a값 : 30
+        a_func밖에서의 a값 : 10
+        '''
+        ```
+        ```python
+        def a_func():
+            a = 20
+            def b_func():
+                nonlocal a
+                a = a+10 # nonlocal을 통해 b_func 바로 바깥 함수인 a_func의 지역변수 a 변경
+                print(f'b_func안에서의 a값 : {a}') # 30
+            b_func()
+            print(f'b_func밖에서의 a값 : {a}') # 30
+            
+        a_func()
+        print(f'a_func밖에서의 a값 : {a}') # a_func() 밖에서는 a라는 변수가 없기 때문에 오류 발생
+        '''
+        b_func안에서의 a값 : 30
+        b_func밖에서의 a값 : 30
+        NameError: name 'a' is not defined 
+        '''
+        ```
+    - nonlocal을 이용한다면 함수의 return 값을 함수내부의 함수로 지정하게 된다면 함수내부의 지역변수값을 기억해둘수 있음(클로저)
+        ```python
+        a=10
+
+        def a_func():
+            a = 20
+            def b_func():
+                nonlocal a
+                a = a+10 # nonlocal을 통해 b_func 바로 바깥 함수인 a_func의 지역변수 a 변경
+                return a
+            print(f'a_func의 시작시점의 a값 : {a}') 
+            return b_func
+
+        c = a_func()
+        print(c()) # b_func 실행 20->30
+        print(c()) # b_func 실행 30->40
+        d = a_func() # 다시 함수를 선언했기때문에 d에서는 a가 20부터 시작
+        print(c()) # b_func 실행 40->50 
+
+        print(f'a_func밖에서의 a값 : {a}') # 10
+        '''
+        a_func의 시작시점의 a값 : 20
+        30
+        40
+        a_func의 시작시점의 a값 : 20
+        50
+        a_func밖에서의 a값 : 10
+        '''
+        ```
+- 변수에 들어간 값이 리스트일경우도 비슷하지만 다른점이 존재하여 주의 필요
+    - 단순히 변수에 숫자가 들어갈때의 예시와 모두 동일한 결과가 나옴.
+        - 예시 1
+            ```python
+            a = [10]
+
+            def a_func():
+                b = a+[20]
+                print(b)
+                
+            a_func()
+            print(a)
+            '''
+            [10, 20]
+            [10]
+            '''
+            ```
+        - 예시 2
+            ```python
+            a = [10]
+
+            def a_func():
+                a = [20]
+                print(f'a_func안에서의 a값 : {a}')
+                
+            a_func()
+            print(f'a_func밖에서의 a값 : {a}')
+            '''
+            a_func안에서의 a값 : [20]
+            a_func밖에서의 a값 : [10]
+            '''
+            ```
+        - 예시 3
+            ```python
+            a = [10]
+
+            def a_func():
+                a = a+[20]
+                print(f'a_func안에서의 a값 : {a}')
+                
+            a_func()
+            print(f'a_func밖에서의 a값 : {a}')
+            '''
+            UnboundLocalError: local variable 'a' referenced before assignment
+            '''
+            ```
+    - 하지만 함수내부에서 global을 선언하지 않아도 append나 del을 이용하게 되면 리스트를 가지고 있는 전역변수의 내용이 변경됨
+        - 예시
+            ```python
+            a = [10]
+
+            def a_func():
+                a.append(20)
+                del a[0]
+                print(f'a_func안에서의 a값 : {a}')
+                
+            a_func()
+            print(f'a_func밖에서의 a값 : {a}')
+            '''
+            a_func안에서의 a값 : [20]
+            a_func밖에서의 a값 : [20]        
+            '''
+            ```
+
+---
+
+## #15
+
+### 클로저
+- 클로저는 자신을 둘러싼 스코프의 상태값을 기억하는 함수
+- 함수가 클로저가 되기 위한 조건
+    - (클로저가 되기 위한 함수) 내부에 (함수)가 존재해야함
+    - (클로저가 되기 위한 함수 **내부의 함수**)가 nonlocal을 통해 (클로저가 되기 위한 함수)의 상태값을 참조해야함
+    - (클로저가 되기 위한 함수)는 (클로저가 되기 위한 함수 **내부의 함수**)를 return 해야함
+- 클래스를 통해 클로저와 같은 기능을 만들수도 있음
+    - 예시 1
+        ```python
+        class Averager():
+            def __init__(self):
+                self._series = []
+
+            def __call__(self, v): # 객체명을 함수명처럼 사용할수 있게 해줌
+                self._series.append(v)
+                print(f'inner >>> {self._series} / {len(self._series)}')
+                return sum(self._series) / len(self._series)
+
+
+        # 인스턴스 생성
+        averager_cls = Averager()
+
+        # 누적
+        print(averager_cls(15))
+        print(averager_cls(35))
+        print(averager_cls(40))
+
+        '''
+        inner >>> [15] / 1
+        15.0
+        inner >>> [15, 35] / 2
+        25.0
+        inner >>> [15, 35, 40] / 3
+        30.0
+        '''   
+        ```
+    - 예시 2
+        ```python
+        class Sum:
+            def __init__(self, start):
+                self.value = start
+
+            def __call__(self, n):
+                self.value += n
+                return self.value
+            
+        sum_ins = Sum(10)
+
+        print(sum_ins(20))
+        print(sum_ins(30))
+        '''
+        30
+        60
+        '''
+        ```
+- 클로저 예시
+    - 예시 1
+        ```python
+        # 클로저(Closure) 사용
+        def closure_ex1():
+            # Free variable
+            series = []
+            # 클로저 영역
+            def averager(v):
+                # series = [] # 주석 해제 후 확인
+                series.append(v) # 리스트는 nonlocal 안해도 append가 됨, 하지만 명확하게 하기 위해 nonlocal series를 적어줘도 됨
+                print(f'inner >>> {series} / {len(series)}')
+                return sum(series) / len(series)
+            
+            return averager
+
+        avg_closure1 = closure_ex1()
+
+        print(avg_closure1(15))
+        print(avg_closure1(35))
+        print(avg_closure1(40))
+        '''
+        inner >>> [15] / 1
+        15.0
+        inner >>> [15, 35] / 2
+        25.0
+        inner >>> [15, 35, 40] / 3
+        30.0
+        '''
+        ```
+    - 예시 2
+        ```python
+        def sum_fun(m):
+            value = m
+            def plus(n):
+                nonlocal value
+                value += n
+                return value
+            return plus
+
+        a = sum_fun(10)
+        print(a(20))
+        print(a(30))
+        '''
+        30
+        60
+        '''
+        ```
+
+#### References
+- [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
+---
+
+
+---
 
 
 ## #100
