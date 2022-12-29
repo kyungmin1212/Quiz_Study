@@ -8,10 +8,13 @@
 - [`__init__`과 `__del__`](#6)
 - [@classmethod 와 @staticmethod](#7)
 - [다양한 special method (= magic method)](#8)
-- [](#)
-- [](#)
-- [](#)
-- [](#)
+- [namedtuple](#9)
+- [generator](#10)
+- [위치 인자와 키워드 인자의 패킹(packing)과 언패킹(unpacking)](#11)
+- [filter, map](#12)
+- [reduce, partial](#13)
+- [global, local, nonlocal](#14)
+- [클로저(closure)](#15)
 
 ---
 
@@ -1133,7 +1136,7 @@
 
 ## #15
 
-### 클로저
+### 클로저(closure)
 - 클로저는 자신을 둘러싼 스코프의 상태값을 기억하는 함수
 - 함수가 클로저가 되기 위한 조건
     - (클로저가 되기 위한 함수) 내부에 (함수)가 존재해야함
