@@ -9,7 +9,7 @@
 - [@classmethod 와 @staticmethod](#7)
 - [다양한 special method (= magic method)](#8)
 - [namedtuple](#9)
-- [generator](#10)
+- [이터레이터(Iterator)와 제너레이터(Generator)](#10)
 - [위치 인자와 키워드 인자의 패킹(packing)과 언패킹(unpacking)](#11)
 - [filter, map](#12)
 - [reduce, partial](#13)
@@ -532,102 +532,220 @@
 
 ## #10
 
-### generator
+### 이터레이터(Iterator)와 제너레이터(Generator)
+- 이터레이터(Iterator)
+    - Iterator란 값을 차례대로 꺼낼 수 있는 객체
+    - iterator는 iterable한 객체를 내장함수 또는 iterable객체의 메소드를 통해 생성 가능
+        - 파이썬 내장함수 iter()를 사용해 iterator 객체 생성 가능
+            ```python
+            a = [1,2,3]
+            print(type(a))
+            a_iter = iter(a)
+            print(type(a_iter))
+            '''
+            <class 'list'>
+            <class 'list_iterator'>
+            '''
+            ```
+        - iterable 객체는 매직메서드 (`__iter__`)메서드를 가지고 있음. 이 메서드로 Iterator 만들기
+            ```python
+            a = [1,2,3]
+            print(dir(a))
+            print(hasattr(a, '__iter__'))
 
-- generator 란 iterator 를 생성해주는 함수, 함수안에 yield 키워드 사용
-- 무한한 순서가 있는 객체를 모델링 가능
-- yield 예시
-    ```python
-    def test_generator():
-        print('yield 1 전')
-        yield 1
-        print('yield 1과 2사이')
-        yield 2
-        print('yield 2와 3사이')
-        yield 3
-        print('yield 3 후')
+            a_iter = a.__iter__()
+            print(type(a_iter))
 
-    g = test_generator()
-    next(g)
-    next(g)
-    next(g)
-    next(g)
-    '''
-    yield 1 전
-    yield 1과 2사이
-    yield 2와 3사이
-    yield 3 후
+            print(next(a_iter))
+            print(next(a_iter))
+            print(next(a_iter))
+            print(next(a_iter))
+            '''
+            1
+            2
+            3
+            StopIteration
+            '''
+            ``` 
+- 제너레이터(Generator)
+    - generator란 iterator 를 생성해주는 함수, 함수안에 yield 키워드 사용
+    - 무한한 순서가 있는 객체를 모델링 가능
+    - yield 예시
+        ```python
+        def test_generator():
+            print('yield 1 전')
+            yield 1
+            print('yield 1과 2사이')
+            yield 2
+            print('yield 2와 3사이')
+            yield 3
+            print('yield 3 후')
 
-    StopIteration 발생
-    '''
+        g = test_generator()
+        next(g)
+        next(g)
+        next(g)
+        next(g)
+        '''
+        yield 1 전
+        yield 1과 2사이
+        yield 2와 3사이
+        yield 3 후
 
-    ```
-    (다음 4번째 next(g)를 실행할때 다음 yield가 있는지 코드를 더 내려갔는데('yield 3 후' 까지 출력) yield가 더이상 없고 함수가 끝났으므로 오류발생)
-- 무한한 순서 있는 객체 예시
-    ```python
-    def infinite_generator():
-        count = 0
-        while True:
-            count+=1
-            yield print(count)
+        StopIteration 발생
+        '''
 
-    g = infinite_generator()
-    next(g)
-    next(g)
-    next(g)
-    next(g)
-    next(g)
-    next(g)
-    next(g)
-    '''
-    1
-    2
-    3
-    4
-    5
-    6
-    7
-    '''
-    ```
-- iterable한 객체를 yield할 때는 yield from iterable객체 사용
-    ```python
-    def three_generator():
-        a = [1, 2, 3]
-        yield from a
+        ```
+        (다음 4번째 next(g)를 실행할때 다음 yield가 있는지 코드를 더 내려갔는데('yield 3 후' 까지 출력) yield가 더이상 없고 함수가 끝났으므로 오류발생)
+    - 무한한 순서 있는 객체 예시
+        ```python
+        def infinite_generator():
+            count = 0
+            while True:
+                count+=1
+                yield print(count)
 
-    gen = three_generator()
-    print(next(gen))
-    print(next(gen))
-    print(list(gen))
-    print(next(gen))
-    '''
-    1
-    2
-    [3]
+        g = infinite_generator()
+        next(g)
+        next(g)
+        next(g)
+        next(g)
+        next(g)
+        next(g)
+        next(g)
+        '''
+        1
+        2
+        3
+        4
+        5
+        6
+        7
+        '''
+        ```
+    - iterable한 객체를 yield할 때는 yield from iterable객체 사용
+        ```python
+        def three_generator():
+            a = [1, 2, 3]
+            yield from a
 
-    StopIteration 발생
-    '''
-    ```
-    (list로 묶어서 한번에 나오면 모든 yield가 다 나오게됨. 따라서 list로 모두 꺼낸후 next를 실행하게 되면 오류발생)
-- 리스트 컴프리헨션 방식을 ( )로 묶어주면 generator가 됨
-    ```python
-    a = (i for i in [10,20,30] if i>=20)
-    print(a)
-    print(next(a))
-    print(next(a))
-    print(next(a))
-    '''
-    <generator object <genexpr> at 0x0000017E62DA0350>
-    20
-    30
+        gen = three_generator()
+        print(next(gen))
+        print(next(gen))
+        print(list(gen))
+        print(next(gen))
+        '''
+        1
+        2
+        [3]
 
-    StopIteration 발생
-    '''
+        StopIteration 발생
+        '''
+        ```
+        (list로 묶어서 한번에 나오면 모든 yield가 다 나오게됨. 따라서 list로 모두 꺼낸후 next를 실행하게 되면 오류발생)
+    - 리스트 컴프리헨션 방식을 ( )로 묶어주면 generator가 됨
+        ```python
+        a = (i for i in [10,20,30] if i>=20)
+        print(a)
+        print(next(a))
+        print(next(a))
+        print(next(a))
+        '''
+        <generator object <genexpr> at 0x0000017E62DA0350>
+        20
+        30
 
-    ```
+        StopIteration 발생
+        '''
+        ```
+    - 클래스를 생성하고 `__iter__` 메서드를 작성하여 제너레이터 생성하기
+        ```python
+        class WordSplitGenerator:
+            def __init__(self, text):
+                self._text = text.split(' ')
+            
+            def __iter__(self):
+                # print('Called __iter__')
+                for word in self._text:
+                yield word # 제네레이터
+                return
+            
+            def __repr__(self):
+                return f'WordSplit({self._text})'
+
+
+        wg = WordSplitGenerator('Do today what you could do tomorrow')
+        # 여기서 바로 next(wg) 하면 오류 발생
+
+        wt = iter(wg) # iter(객체)를 해주게 되면 generator가 됨
+
+        print(wg)
+        print(wt)
+        print(next(wt))
+        print(next(wt))
+        print(next(wt))
+        print(next(wt))
+        print(next(wt))
+        print(next(wt))
+        print(next(wt))
+        '''
+        WordSplit(['Do', 'today', 'what', 'you', 'could', 'do', 'tomorrow'])
+        <generator object WordSplitGenerator.__iter__ at 0x0000010CB4060350>    
+        Do
+        today
+        what
+        you
+        could
+        do
+        tomorrow
+        '''
+        ```
+    - 참고 : generator를 생성안하고 `__next__` 메서드를 이용하여 바로 next 적용할수 있게 만들기 (위의 방법이 확실한 제너레이터 생성 방법, 이건 단지 참고용으로 작성)
+        ```python
+        class WordSplitIter:
+            def __init__(self, text):
+                self._idx = 0
+                self._text = text.split(' ')
+            
+            def __next__(self):
+                # print('Called __next__')
+                try:
+                    word = self._text[self._idx]
+                except IndexError:
+                    raise StopIteration('Stopped Iteration.')
+                self._idx += 1
+                return word
+
+            def __repr__(self):
+                return f'WordSplit({self._text})'
+
+
+        wi = WordSplitIter('Do today what you could do tomorrow')
+
+        print(wi)
+        print(next(wi))
+        print(next(wi))
+        print(next(wi))
+        print(next(wi))
+        print(next(wi))
+        print(next(wi))
+        print(next(wi))       
+        '''
+        WordSplit(['Do', 'today', 'what', 'you', 'could', 'do', 'tomorrow'])
+        Do
+        today
+        what
+        you
+        could
+        do
+        tomorrow
+        ''' 
+        ```
+        
 #### References
+- https://wikidocs.net/16068
 - https://wikidocs.net/16069
-
+- [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
 ---
 
 ## #11
@@ -1244,6 +1362,199 @@
 - [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
 ---
 
+## #16
+
+### 데코레이터(Decorator)
+- 함수를 입력 인자로 받아 결괏값을 내는 경우 데코레이터로 작성해주면 편하게 사용 가능
+- 대표적인 예로는 함수의 시간을 측정하기 위해 데코레이터를 만들수가 있음
+- 데코레이터 함수 작성 규칙
+    ```python
+    def 데코레이터명(func):
+        def 함수(*args,**kwargs):
+            result = func(*args,**kwargs)
+            # 함수 안에다가 func이 실행될때마다 같이 출력되거나 작동시키고 싶은 코드 작성
+            return result
+        return 함수
+
+    @데코레이터명
+    def A_func():
+        pass
+
+- 예시
+    ```python
+    import time
+
+    def perf_clock(func):
+        def perf_clocked(*args):
+            # 함수 시작 시간 
+            start_time = time.perf_counter() # time.time 보다 정밀하게 실행 시간을 측정하는 방법
+            result = func(*args)
+            # 함수 종료 시간 계산
+            end_time = time.perf_counter()
+            # 실행 함수명
+            name = func.__name__
+            # 함수 매개변수 
+            arg_str = ', '.join(repr(arg) for arg in args)
+            # 결과 출력
+            print(f'[{end_time-start_time:.5f}] {name}({arg_str})) -> {result}') 
+            return result 
+        return perf_clocked
+
+    # 데코레이터 사용 (코드 실행 순서 : perf_clock -> perf_clocked -> return)
+    @perf_clock
+    def time_func(seconds):
+        time.sleep(seconds)
+
+    @perf_clock
+    def sum_func(*numbers):
+        return sum(numbers)
+
+    time_func(1.5) 
+    sum_func(100, 150, 250, 300, 350)
+
+    print('*'*10)
+    # 데코레이터 미사용
+    def time_func(seconds):
+        time.sleep(seconds)
+
+    def sum_func(*numbers):
+        return sum(numbers)
+
+    none_deco1 = perf_clock(time_func)
+    none_deco1(1.5) 
+
+    none_deco2 = perf_clock(sum_func)
+    none_deco2(100, 150, 250, 300, 350)
+
+    '''
+    [1.50992] time_func(1.5)) -> None
+    [0.00000] sum_func(100, 150, 250, 300, 350)) -> 1150
+    **********
+    [1.50245] time_func(1.5)) -> None
+    [0.00000] sum_func(100, 150, 250, 300, 350)) -> 1150
+    '''
+    ```
+
+#### References
+- [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
+---
+
+
+## #17
+
+### 코루틴(Coroutine)
+- yield를 통해 메인루틴과 서브루틴을 왔다갔다함
+- 코루틴은 단일 쓰레드 이용
+- 멀티 쓰레드를 사용하면 운영체제가 운영체제 커널의 알고리즘 스케줄러에 따라 실행 중인 쓰레드를 전환시키지만, 코루틴을 사용하면 프로그래머가 전환이 발생하는 시기를 제어할 수 있음.
+- 코루틴 상태
+    - GEN_CREATED : 처음 대기 상태
+    - GEN_RUNNING : 실행 상태
+    - GEN_SUSPENDED : yield 대기 상태
+    - GEN_CLOSED : 실행 완료 상태
+- 코루틴 예시
+    - 예시 1
+        ```python
+        def coroutine1():
+            print('>>> coroutine started.')
+            i = yield
+            print('>>> coroutine received : {}'.format(i))
+
+        # 제네레이터 선언
+        cr1 = coroutine1()
+
+        print(cr1, type(cr1))
+
+        next(cr1)
+        next(cr1)
+        '''
+        >>> coroutine started.
+        >>> coroutine received : None
+        StopIteration
+        '''
+        ```
+        (yield 부분에 값을 send를 통해서 보내줘야하는데 아무런 값을 보내지 않았기 때문에 None이 출력됨)
+        (next를 하게되면 yield있는 부분까지 코드 실행)
+    - 예시 2
+        ```python
+        def coroutine2(x):
+            print('>>> coroutine started : {}'.format(x))
+            y = yield x
+            print('>>> coroutine received : {}'.format(y))
+            z = yield x + y
+            print('>>> coroutine received : {}'.format(z))
+            
+        cr2 = coroutine2(10)
+
+        cr2.send(100)
+        '''
+        TypeError: can't send non-None value to a just-started generator  
+        '''
+        ```
+        (yield에 도착해야지만 send를 통하여 값 전달가능. 반드시 처음에는 next실행 필요)
+    - 예시 3
+        ```python
+        def number_coroutine():
+            while True:        # 코루틴을 계속 유지하기 위해 무한 루프 사용
+                x = (yield)    # 코루틴 바깥에서 값을 받아옴, yield를 괄호로 묶어야 함
+                print(x)
+                
+        co = number_coroutine()
+        next(co)      # 코루틴 안의 yield까지 코드 실행(최초 실행)
+
+        co.send(1)    # 코루틴에 숫자 1을 보냄
+        co.send(2)    # 코루틴에 숫자 2을 보냄
+        co.send(3)    # 코루틴에 숫자 3을 보냄
+        '''
+        1
+        2
+        3
+        '''
+        ```
+        <p align="center"><img src="../img/coroutine.jpg" width="40%" height="30%"></img></p>
+#### References
+- https://stackoverflow.com/questions/1934715/difference-between-a-coroutine-and-a-thread
+- https://dojang.io/mod/page/view.php?id=2418
+- [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
+
+---
+
+## #18
+
+###
+
+
+
+#### References
+
+---
+
+## #19
+
+###
+
+
+
+#### References
+
+---
+
+## #20
+
+###
+
+
+
+#### References
+
+---
+
+## #21
+
+###
+
+
+
+#### References
 
 ---
 
