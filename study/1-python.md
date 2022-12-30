@@ -1510,7 +1510,7 @@
         3
         '''
         ```
-        <p align="center"><img src="../img/coroutine.jpg" width="40%" height="30%"></img></p>
+        ![](./img/coroutine.jpg)
 #### References
 - https://stackoverflow.com/questions/1934715/difference-between-a-coroutine-and-a-thread
 - https://dojang.io/mod/page/view.php?id=2418
