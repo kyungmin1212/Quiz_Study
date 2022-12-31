@@ -1443,7 +1443,8 @@
 ## #17
 
 ### 코루틴(Coroutine)
-- yield를 통해 메인루틴과 서브루틴을 왔다갔다함
+- 메인루틴과 서브루틴을 원하는 시점에 이동가능(비동기(Asynchronous))
+    - 동기(Synchronous)는 하나의 함수가 완료되어야지만 다음 함수 실행
 - 코루틴은 단일 쓰레드 이용
 - 멀티 쓰레드를 사용하면 운영체제가 운영체제 커널의 알고리즘 스케줄러에 따라 실행 중인 쓰레드를 전환시키지만, 코루틴을 사용하면 프로그래머가 전환이 발생하는 시기를 제어할 수 있음.
 - 코루틴 상태
@@ -1478,9 +1479,9 @@
         ```python
         def coroutine2(x):
             print('>>> coroutine started : {}'.format(x))
-            y = yield x
+            y = yield
             print('>>> coroutine received : {}'.format(y))
-            z = yield x + y
+            z = yield
             print('>>> coroutine received : {}'.format(z))
             
         cr2 = coroutine2(10)
@@ -1511,6 +1512,86 @@
         '''
         ```
         ![](./img/coroutine.jpg)
+    - 예시 4
+        ```python
+        from inspect import getgeneratorstate
+
+        def number_coroutine():
+            while True:        # 코루틴을 계속 유지하기 위해 무한 루프 사용
+                x = (yield)    # 코루틴 바깥에서 값을 받아옴, yield를 괄호로 묶어야 함
+                print(x)
+                print(getgeneratorstate(co)) # GEN_RUNNING
+                
+        co = number_coroutine()
+        print(getgeneratorstate(co)) # GEN_CREATED
+        next(co)      # 코루틴 안의 yield까지 코드 실행(최초 실행)
+        print(getgeneratorstate(co)) # GEN_SUSPENDED
+        co.send(1)    # 코루틴에 숫자 1을 보냄
+        print(getgeneratorstate(co)) # GEN_SUSPENDED
+        co.send(2)    # 코루틴에 숫자 2을 보냄
+        print(getgeneratorstate(co)) # GEN_SUSPENDED
+        co.send(3)    # 코루틴에 숫자 3을 보냄
+        print(getgeneratorstate(co)) # GEN_SUSPENDED
+        '''
+        GEN_CREATED
+        GEN_SUSPENDED
+        1
+        GEN_RUNNING
+        GEN_SUSPENDED
+        2
+        GEN_RUNNING
+        GEN_SUSPENDED
+        3
+        GEN_RUNNING
+        GEN_SUSPENDED
+        '''
+        ```
+        (from inspect import getgeneratorstate 를 통해 코루틴 상태 출력 가능)
+
+    - 예시 5
+        ```python
+        def generator1():
+            for x in 'AB':
+                yield x
+            for y in range(1,4):
+                yield y
+
+        t1 = generator1()
+
+        print(next(t1))
+        print(next(t1))
+        print(next(t1))
+        print(next(t1))
+        print(next(t1))
+
+        t2 = generator1()
+
+        print(list(t2))
+
+        def generator2():
+            yield from 'AB'
+            yield from range(1,4)
+
+        t3 = generator2()
+        print(next(t3))
+        print(next(t3))
+        print(next(t3))
+        print(next(t3))
+        print(next(t3))
+        '''
+        A
+        B
+        1
+        2
+        3
+        ['A', 'B', 1, 2, 3]
+        A
+        B
+        1
+        2
+        3
+        '''
+        ```
 #### References
 - https://stackoverflow.com/questions/1934715/difference-between-a-coroutine-and-a-thread
 - https://dojang.io/mod/page/view.php?id=2418
@@ -1520,18 +1601,24 @@
 
 ## #18
 
-###
-
+### GIL(Global Interpreter Lock)
+- GIL은 파이썬에서 두 개 이상의 쓰레드가 동시에 실행 될 때 하나의 자원을 엑세스 할때 발생하는 문제점을 방지하기 위해 멀티 쓰레드를 사용하더라도 실제로는 하나의 쓰레드밖에 동작하지 못하는 것을 말함
+- Context Switch를 통해서 쓰레드별로 왔다갔다하면서 작업수행하기때문에 동시에 수행되는것처럼 보임(실제로는 하나의 쓰레드만 동작)
+- 따라서 파이썬에서는 멀티쓰레드를 사용하더라도 속도향상을 기대하기 어려움
+- GIL로 인하여 멀티프로세싱이나 cpython을 이용하기도함
 
 
 #### References
-
+- [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
+- [고수가 되는 파이썬 : 동시성과 병렬성 문법 배우기](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%99%84%EC%84%B1-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90/dashboard)
 ---
 
 ## #19
 
-###
-
+### multi threading / multi processing
+- concurrent.Futures 을 사용하여 멀티쓰레딩과 멀티프로세싱 쉽게 사용가능
+- multi threading 예시
+- multi processing 예시
 
 
 #### References
