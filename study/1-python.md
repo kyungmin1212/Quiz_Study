@@ -667,7 +667,7 @@
             def __iter__(self):
                 # print('Called __iter__')
                 for word in self._text:
-                yield word # 제네레이터
+                    yield word # 제네레이터
                 return
             
             def __repr__(self):
@@ -1617,11 +1617,233 @@
 
 ### multi threading / multi processing
 - concurrent.Futures 을 사용하여 멀티쓰레딩과 멀티프로세싱 쉽게 사용가능
-- multi threading 예시
-- multi processing 예시
+- futures 예시 (multi processing은 ThreadPoolExecutor를 ProcessPoolExecutor로 변경)
+    - result로 한번에 받아오는 경우(map 사용) -> 하나라도 끝나지 않으면 결과를 받아올 수 없음
+        - 예시 1 (multi thread)
+            ```python
+            import os
+            import time
+            from concurrent import futures
 
+            WORK_LIST = [100000, 1000000, 10000000, 10000000]
+
+            # 동시성 합계 계산 메인함수
+            # 누적 합계 함수(제네레이터)
+            def sum_generator(n):
+                return sum(n for n in range(1, n+1))
+
+            def main():
+                # Worker Count
+                worker = min(10, len(WORK_LIST))
+                # 시작 시간
+                start_tm = time.time()
+                # 결과 건수
+                # ProcessPoolExecutor
+                with futures.ThreadPoolExecutor(max_workers=worker) as excutor:
+                    # map -> 작업 순서 유지, 즉시 실행
+                    result = excutor.map(sum_generator, WORK_LIST)
+                # 종료 시간
+                end_tm = time.time() - start_tm
+                # 출력 포멧
+                msg = '\n Result -> {} Time : {:.2f}s'
+                # 최종 결과 출력
+                print(msg.format(list(result), end_tm))
+
+            # 실행
+            if __name__ == '__main__':
+                main()
+            '''
+            Result -> [5000050000, 500000500000, 50000005000000, 50000005000000] Time : 0.84s
+            '''
+            ```
+        - 예시 2 (multi process)
+            ```python
+            import os
+            import time
+            from concurrent import futures
+
+            WORK_LIST = [100000, 1000000, 10000000, 10000000]
+
+            # 동시성 합계 계산 메인함수
+            # 누적 합계 함수(제네레이터)
+            def sum_generator(n):
+                return sum(n for n in range(1, n+1))
+
+            def main():
+                # Worker Count
+                worker = min(10, len(WORK_LIST))
+                # 시작 시간
+                start_tm = time.time()
+                # 결과 건수
+                # ThreadPoolExecutor
+                with futures.ProcessPoolExecutor(max_workers=worker) as excutor:
+                    # map -> 작업 순서 유지, 즉시 실행
+                    result = excutor.map(sum_generator, WORK_LIST)
+                # 종료 시간
+                end_tm = time.time() - start_tm
+                # 출력 포멧
+                msg = '\n Result -> {} Time : {:.2f}s'
+                # 최종 결과 출력
+                print(msg.format(list(result), end_tm))
+
+            # 실행
+            if __name__ == '__main__':
+                main()
+            '''
+            Result -> [5000050000, 500000500000, 50000005000000, 50000005000000] Time : 0.59s
+            '''
+            ```
+    - result를 timeout안에 끝난 내용만 받아오기(submit) -> timeout안에 끝난 내용 받아옴
+        - 예시 1 (wait)
+            ```python
+            import os
+            import time
+            from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait, as_completed
+
+            WORK_LIST = [10000, 200000000, 1000000, 10000000]
+
+
+            # 동시성 합계 계산 메인 함수
+            # 누적 합계 함수(제레네이터)
+            def sum_generator(n):
+                return sum(n for n in range(1, n+1))
+
+            # wait
+            # as_completed
+            def main():
+                # Worker Count
+                worker = min(10, len(WORK_LIST))
+                
+                # 시작 시간
+                start_tm = time.time()
+                # Futures
+                futures_list = []
+
+                # 결과 건수
+                # ProcessPoolExecutor
+                with ThreadPoolExecutor(worker) as excutor:
+                    for work in WORK_LIST:
+                        # future 반환
+                        future = excutor.submit(sum_generator, work)
+                        # 스케쥴링
+                        futures_list.append(future)
+                        # 스케쥴링 확인
+                        print('Scheduled for {} : {}'.format(work, future))
+                        # print()
+                    
+                    # wait 결과 출력
+                    result = wait(futures_list, timeout=7)
+                    # 성공
+                    print('Completed Tasks : ' + str(result.done))
+                    # 실패
+                    print('Pending ones after waiting for 7seconds : ' + str(result.not_done))
+                    # 결과 값 출력
+                    print([future.result() for future in result.done])
+                        
+                # 종료 시간
+                end_tm = time.time() - start_tm
+                # 출력 포멧
+                msg = '\n Time : {:.2f}s'
+                # 최종 결과 출력
+                print(msg.format(end_tm))
+
+            # 실행
+            if __name__ == '__main__':
+                main()
+            '''
+            Scheduled for 10000 : <Future at 0x21797c72050 state=finished returned int>
+            Scheduled for 200000000 : <Future at 0x21797c72170 state=pending>
+            Scheduled for 1000000 : <Future at 0x21797d87310 state=running>
+            Scheduled for 10000000 : <Future at 0x21797d87610 state=running>
+            Completed Tasks : {<Future at 0x21797d87310 state=finished returned int>, <Future at 0x21797c72050 state=finished returned int>, <Future at 0x21797d87610 state=finished returned int>}
+            Pending ones after waiting for 7seconds : {<Future at 0x21797c72170 state=running>}
+            [500000500000, 50005000, 50000005000000]
+
+            Time : 7.99s
+            '''                
+            ```
+            (7초안에 끝난 3가지만 먼저 한번에 출력, 200000000는 7.99초가 걸려서 결과 출력이 안됨.)    
+            (wait는 timeout 시간이 지나더라도, timeout시간이 지난 task는 결과 출력이 되지 않을뿐 일은 계속 진행됨)
+        
+        - 예시 2 (as_completed)
+            ```python
+            import os
+            import time
+            from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait, as_completed
+
+            WORK_LIST = [10000, 200000000, 1000000, 10000000]
+
+
+            # 동시성 합계 계산 메인 함수
+            # 누적 합계 함수(제레네이터)
+            def sum_generator(n):
+                return sum(n for n in range(1, n+1))
+
+            # wait
+            # as_completed
+            def main():
+                # Worker Count
+                worker = min(10, len(WORK_LIST))
+                
+                # 시작 시간
+                start_tm = time.time()
+                # Futures
+                futures_list = []
+
+                # 결과 건수
+                # ProcessPoolExecutor
+                with ThreadPoolExecutor(worker) as excutor:
+                    for work in WORK_LIST:
+                        # future 반환
+                        future = excutor.submit(sum_generator, work)
+                        # 스케쥴링
+                        futures_list.append(future)
+                        # 스케쥴링 확인
+                        print('Scheduled for {} : {}'.format(work, future))
+                        # print()
+                    
+                    # as_completed 결과 출력
+                    for future in as_completed(futures_list,timeout=7):
+                        result = future.result()
+                        done = future.done()
+                        cancelled = future.cancelled
+                        
+                        # future 결과 확인
+                        print('Future Result : {}, Done : {}'.format(result, done))
+                        print('Future Cancelled : {}'.format(cancelled))
+                
+                        
+                # 종료 시간
+                end_tm = time.time() - start_tm
+                # 출력 포멧
+                msg = '\n Time : {:.2f}s'
+                # 최종 결과 출력
+                print(msg.format(end_tm))
+
+            # 실행
+            if __name__ == '__main__':
+                main()
+            '''
+            Scheduled for 10000 : <Future at 0x1d5de9c2050 state=finished returned int>
+            Scheduled for 200000000 : <Future at 0x1d5de9c2170 state=pending>
+            Scheduled for 1000000 : <Future at 0x1d5dead7310 state=running>
+            Scheduled for 10000000 : <Future at 0x1d5dead72e0 state=pending>
+            Future Result : 50005000, Done : True
+            Future Cancelled : <bound method Future.cancelled of <Future at 0x1d5de9c2050 state=finished returned int>>
+            Future Result : 500000500000, Done : True
+            Future Cancelled : <bound method Future.cancelled of <Future at 0x1d5dead7310 state=finished returned int>>
+            Future Result : 50000005000000, Done : True
+            Future Cancelled : <bound method Future.cancelled of <Future at 0x1d5dead72e0 state=finished returned int>>
+
+            raise TimeoutError(concurrent.futures._base.TimeoutError: 1 (of 4) futures unfinished
+            '''
+
+            ```
+            (as_completed는 출력 결과를 한번에 출력하는 것이 아니라 먼저 끝나면 바로 출력을 해줌.)   
+            (as_completed는 timeout시간이 지나게 되면 무조건 종료시켜버림)
 
 #### References
+- [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
 
 ---
 
