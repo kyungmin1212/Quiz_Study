@@ -1445,8 +1445,9 @@
 ### 코루틴(Coroutine)
 - 메인루틴과 서브루틴을 원하는 시점에 이동가능(비동기(Asynchronous))
     - 동기(Synchronous)는 하나의 함수가 완료되어야지만 다음 함수 실행
-- 코루틴은 단일 쓰레드 이용
+- 코루틴은 단일 쓰레드 이용, 기존 쓰레드의 문제인 Context-Switiching비용이 들지 않음
 - 멀티 쓰레드를 사용하면 운영체제가 운영체제 커널의 알고리즘 스케줄러에 따라 실행 중인 쓰레드를 전환시키지만, 코루틴을 사용하면 프로그래머가 전환이 발생하는 시기를 제어할 수 있음.
+- 코루틴은 프로그래머가 직접 전환이 발생하는 시기를 제어하기 때문에 사용 함수가 비동기로 구현이 되어 있어야 하거나, 또는 직접 비동기로 구현해야하는 단점이 있음
 - 코루틴 상태
     - GEN_CREATED : 처음 대기 상태
     - GEN_RUNNING : 실행 상태
@@ -1603,10 +1604,11 @@
 
 ### GIL(Global Interpreter Lock)
 - GIL은 파이썬에서 두 개 이상의 쓰레드가 동시에 실행 될 때 하나의 자원을 엑세스 할때 발생하는 문제점을 방지하기 위해 멀티 쓰레드를 사용하더라도 실제로는 하나의 쓰레드밖에 동작하지 못하는 것을 말함
+- CPython 메모리 관리가 취약하기 때문에 발생
 - Context Switch를 통해서 쓰레드별로 왔다갔다하면서 작업수행하기때문에 동시에 수행되는것처럼 보임(실제로는 하나의 쓰레드만 동작)
 - 따라서 파이썬에서는 멀티쓰레드를 사용하더라도 속도향상을 기대하기 어려움
 - GIL로 인하여 멀티프로세싱이나 cpython을 이용하기도함
-
+- 단, GIL은 CPU bound 작업을 할 때에만 해당됨. I/O bound 작업들을 할때에는 GIL을 해제하여 I/O bound 작업들에 대해서는 여러 개의 쓰레드를 사용해서 효율적인 동시 처리가 가능함
 
 #### References
 - [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
@@ -1616,241 +1618,1296 @@
 ## #19
 
 ### multi threading / multi processing
-- concurrent.Futures 을 사용하여 멀티쓰레딩과 멀티프로세싱 쉽게 사용가능
-- futures 예시 (multi processing은 ThreadPoolExecutor를 ProcessPoolExecutor로 변경)
-    - result로 한번에 받아오는 경우(map 사용) -> 하나라도 끝나지 않으면 결과를 받아올 수 없음
-        - 예시 1 (multi thread)
-            ```python
-            import os
-            import time
-            from concurrent import futures
+- 파이썬에서 CPU bound 에서는 GIL 로 인하여 multi threading이 효과가 없음. 이럴 경우는 multi processing이나 코루틴이용.
+- 단, I/O bound 에서는 GIL을 해제하여 여러 개의 쓰레드(multi thread)를 사용(하여 효율적인 동시 처리가 가능함.
+- Process vs Thread(차이 비교(중요))
+    - 독립된 메모리(프로세스), 공유메모리(스레드)
+    - 많은 메모리 필요(프로세스), 적은 메모리(스레드)
+    - 좀비(데드)프로세스 생성 가능성, 좀비(데드) 스레드 생성 쉽지 않음
+    - 오버헤드 큼(프로세스), 오버헤드 작음(스레드)
+    - 생성/소멸 다소 느림(프로세스), 생성/소멸 빠름(스레드)
+    - 코드 작성 쉬움/디버깅 어려움(프로세스), 코드작성 어려움/디버깅 어려움(스레드)
+- threading
+    - 예시 1
+        ```python
+        import logging
+        import threading
+        import time
 
-            WORK_LIST = [100000, 1000000, 10000000, 10000000]
+        # 스레드 실행 함수
+        def thread_func(name):
+            logging.info(f"Sub-Thread {name}: starting")
+            time.sleep(3)
+            logging.info(f"Sub-Thread {name}: finishing")
 
-            # 동시성 합계 계산 메인함수
-            # 누적 합계 함수(제네레이터)
-            def sum_generator(n):
-                return sum(n for n in range(1, n+1))
-
-            def main():
-                # Worker Count
-                worker = min(10, len(WORK_LIST))
-                # 시작 시간
-                start_tm = time.time()
-                # 결과 건수
-                # ProcessPoolExecutor
-                with futures.ThreadPoolExecutor(max_workers=worker) as excutor:
-                    # map -> 작업 순서 유지, 즉시 실행
-                    result = excutor.map(sum_generator, WORK_LIST)
-                # 종료 시간
-                end_tm = time.time() - start_tm
-                # 출력 포멧
-                msg = '\n Result -> {} Time : {:.2f}s'
-                # 최종 결과 출력
-                print(msg.format(list(result), end_tm))
-
-            # 실행
-            if __name__ == '__main__':
-                main()
-            '''
-            Result -> [5000050000, 500000500000, 50000005000000, 50000005000000] Time : 0.84s
-            '''
-            ```
-        - 예시 2 (multi process)
-            ```python
-            import os
-            import time
-            from concurrent import futures
-
-            WORK_LIST = [100000, 1000000, 10000000, 10000000]
-
-            # 동시성 합계 계산 메인함수
-            # 누적 합계 함수(제네레이터)
-            def sum_generator(n):
-                return sum(n for n in range(1, n+1))
-
-            def main():
-                # Worker Count
-                worker = min(10, len(WORK_LIST))
-                # 시작 시간
-                start_tm = time.time()
-                # 결과 건수
-                # ThreadPoolExecutor
-                with futures.ProcessPoolExecutor(max_workers=worker) as excutor:
-                    # map -> 작업 순서 유지, 즉시 실행
-                    result = excutor.map(sum_generator, WORK_LIST)
-                # 종료 시간
-                end_tm = time.time() - start_tm
-                # 출력 포멧
-                msg = '\n Result -> {} Time : {:.2f}s'
-                # 최종 결과 출력
-                print(msg.format(list(result), end_tm))
-
-            # 실행
-            if __name__ == '__main__':
-                main()
-            '''
-            Result -> [5000050000, 500000500000, 50000005000000, 50000005000000] Time : 0.59s
-            '''
-            ```
-    - result를 timeout안에 끝난 내용만 받아오기(submit) -> timeout안에 끝난 내용 받아옴
-        - 예시 1 (wait)
-            ```python
-            import os
-            import time
-            from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait, as_completed
-
-            WORK_LIST = [10000, 200000000, 1000000, 10000000]
-
-
-            # 동시성 합계 계산 메인 함수
-            # 누적 합계 함수(제레네이터)
-            def sum_generator(n):
-                return sum(n for n in range(1, n+1))
-
-            # wait
-            # as_completed
-            def main():
-                # Worker Count
-                worker = min(10, len(WORK_LIST))
-                
-                # 시작 시간
-                start_tm = time.time()
-                # Futures
-                futures_list = []
-
-                # 결과 건수
-                # ProcessPoolExecutor
-                with ThreadPoolExecutor(worker) as excutor:
-                    for work in WORK_LIST:
-                        # future 반환
-                        future = excutor.submit(sum_generator, work)
-                        # 스케쥴링
-                        futures_list.append(future)
-                        # 스케쥴링 확인
-                        print('Scheduled for {} : {}'.format(work, future))
-                        # print()
-                    
-                    # wait 결과 출력
-                    result = wait(futures_list, timeout=7)
-                    # 성공
-                    print('Completed Tasks : ' + str(result.done))
-                    # 실패
-                    print('Pending ones after waiting for 7seconds : ' + str(result.not_done))
-                    # 결과 값 출력
-                    print([future.result() for future in result.done])
-                        
-                # 종료 시간
-                end_tm = time.time() - start_tm
-                # 출력 포멧
-                msg = '\n Time : {:.2f}s'
-                # 최종 결과 출력
-                print(msg.format(end_tm))
-
-            # 실행
-            if __name__ == '__main__':
-                main()
-            '''
-            Scheduled for 10000 : <Future at 0x21797c72050 state=finished returned int>
-            Scheduled for 200000000 : <Future at 0x21797c72170 state=pending>
-            Scheduled for 1000000 : <Future at 0x21797d87310 state=running>
-            Scheduled for 10000000 : <Future at 0x21797d87610 state=running>
-            Completed Tasks : {<Future at 0x21797d87310 state=finished returned int>, <Future at 0x21797c72050 state=finished returned int>, <Future at 0x21797d87610 state=finished returned int>}
-            Pending ones after waiting for 7seconds : {<Future at 0x21797c72170 state=running>}
-            [500000500000, 50005000, 50000005000000]
-
-            Time : 7.99s
-            '''                
-            ```
-            (7초안에 끝난 3가지만 먼저 한번에 출력, 200000000는 7.99초가 걸려서 결과 출력이 안됨.)    
-            (wait는 timeout 시간이 지나더라도, timeout시간이 지난 task는 결과 출력이 되지 않을뿐 일은 계속 진행됨)
+        # 메인 영역
+        if __name__ == "__main__":
+            # Logging format 설정
+            format = "%(asctime)s: %(message)s"
+            logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+            logging.info("Main-Thread : before creating thread")
+            
+            # 함수 인자 확인
+            x = threading.Thread(target=thread_func, args=('First',))
+            
+            logging.info("Main-Thread : before running thread")
         
-        - 예시 2 (as_completed)
-            ```python
-            import os
-            import time
-            from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait, as_completed
+            # 서브 스레드 시작
+            x.start()
+        
+            logging.info("Main-Thread : wait for the thread to finish")
+            
+            logging.info("Main-Thread : all done")
+        '''
+        08:11:57: Main-Thread : before creating thread
+        08:11:57: Main-Thread : before running thread
+        08:11:57: Sub-Thread First: starting
+        08:11:57: Main-Thread : wait for the thread to finish
+        08:11:57: Main-Thread : all done
+        08:12:00: Sub-Thread First: finishing
+        '''
+        ```
+    - 예시 2 (join)
+        ```python
+        import logging
+        import threading
+        import time
 
-            WORK_LIST = [10000, 200000000, 1000000, 10000000]
+        # 스레드 실행 함수
+        def thread_func(name):
+            logging.info(f"Sub-Thread {name}: starting")
+            time.sleep(3)
+            logging.info(f"Sub-Thread {name}: finishing")
+
+        # 메인 영역
+        if __name__ == "__main__":
+            # Logging format 설정
+            format = "%(asctime)s: %(message)s"
+            logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+            logging.info("Main-Thread : before creating thread")
+            
+            # 함수 인자 확인
+            x = threading.Thread(target=thread_func, args=('First',))
+            
+            logging.info("Main-Thread : before running thread")
+        
+            # 서브 스레드 시작
+            x.start()
+        
+            logging.info("Main-Thread : wait for the thread to finish")
+            
+            # 주석 전후 결과 확인
+            x.join()
+            
+            logging.info("Main-Thread : all done")        
+        '''
+        08:32:09: Main-Thread : before creating thread
+        08:32:09: Main-Thread : before running thread
+        08:32:09: Sub-Thread First: starting
+        08:32:09: Main-Thread : wait for the thread to finish
+        08:32:12: Sub-Thread First: finishing
+        08:32:12: Main-Thread : all done       
+        '''
+        ```
+        (join을 해준 결과 sub_thread가 끝난 후에 main_thread가 완료됨.)
+    - 예시 3 (Daemon)
+        ```python
+        import logging
+        import threading
+        import time
+
+        # 스레드 실행 함수
+        def thread_func(name):
+            logging.info("Sub-Thread %s: starting", name)
+            time.sleep(3)
+            logging.info("Sub-Thread %s: finishing", name)
+
+        # 메인 영역
+        if __name__ == "__main__":
+            # Logging format 설정
+            format = "%(asctime)s: %(message)s"
+            logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+            logging.info("Main-Thread : before creating thread")
+            
+            # 함수 인자 확인
+            # Deamon : Default False
+            x = threading.Thread(target=thread_func, args=('First',), daemon=True)
+
+            y = threading.Thread(target=thread_func, args=('Second',), daemon=True)
+            
+            logging.info("Main-Thread : before running thread")
+            
+            # 서브 스레드 시작
+            x.start()
+            y.start()
+
+            # DaemonThread 확인
+            # print(x.isDaemon())
+        
+            logging.info("Main-Thread : wait for the thread to finish")
+            
+            logging.info("Main-Thread : all done")
+        '''
+        08:36:31: Main-Thread : before creating thread
+        08:36:31: Main-Thread : before running thread
+        08:36:31: Sub-Thread First: starting
+        08:36:31: Sub-Thread Second: starting
+        08:36:31: Main-Thread : wait for the thread to finish
+        08:36:31: Main-Thread : all done
+        '''
+        ```
+        (damonthread의 경우 메인 스레드가 종료시 즉시 종료됨, 일반 스레드는 메인 스레드가 종료되더라도 작업 종료시까지 실행됨)
+    - 예시 4 (Daemon + join)
+        ```python
+        import logging
+        import threading
+        import time
+
+        # 스레드 실행 함수
+        def thread_func(name):
+            logging.info("Sub-Thread %s: starting", name)
+            time.sleep(3)
+            logging.info("Sub-Thread %s: finishing", name)
+
+        # 메인 영역
+        if __name__ == "__main__":
+            # Logging format 설정
+            format = "%(asctime)s: %(message)s"
+            logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+            logging.info("Main-Thread : before creating thread")
+            
+            # 함수 인자 확인
+            # Deamon : Default False
+            x = threading.Thread(target=thread_func, args=('First',), daemon=True)
+            # x.daemon = True
+
+            y = threading.Thread(target=thread_func, args=('Second',), daemon=True)
+            
+            logging.info("Main-Thread : before running thread")
+            
+            # 서브 스레드 시작
+            x.start()
+            y.start()
+
+            # DaemonThread 확인
+            # print(x.isDaemon())
+        
+            logging.info("Main-Thread : wait for the thread to finish")
+            
+            # 주석 전후 결과 확인
+            x.join() 
+            y.join()
+            
+            logging.info("Main-Thread : all done")
+        '''
+        08:37:41: Main-Thread : before creating thread
+        08:37:41: Main-Thread : before running thread
+        08:37:41: Sub-Thread First: starting
+        08:37:41: Sub-Thread Second: starting
+        08:37:41: Main-Thread : wait for the thread to finish
+        08:37:44: Sub-Thread First: finishing
+        08:37:44: Sub-Thread Second: finishing
+        08:37:44: Main-Thread : all done
+        '''
+        ```
+        (join을 해준시점에서 무조건 x와 y가 끝나야지만 main_thread 진행됨)
+    - 예시 5 (join 순서를 바꿔준 경우)
+        ```python
+        import logging
+        import threading
+        import time
+
+        # 스레드 실행 함수
+        def thread_func(name):
+            logging.info("Sub-Thread %s: starting", name)
+            time.sleep(3)
+            logging.info("Sub-Thread %s: finishing", name)
+
+        # 메인 영역
+        if __name__ == "__main__":
+            # Logging format 설정
+            format = "%(asctime)s: %(message)s"
+            logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+            logging.info("Main-Thread : before creating thread")
+            
+            # 함수 인자 확인
+            # Deamon : Default False
+            x = threading.Thread(target=thread_func, args=('First',), daemon=True)
+            # x.daemon = True
+
+            y = threading.Thread(target=thread_func, args=('Second',), daemon=True)
+            
+            logging.info("Main-Thread : before running thread")
+            
+            # 서브 스레드 시작
+            x.start()
+            x.join() 
+        
+            logging.info("Main-Thread : wait for the thread to finish")
+            
+            y.start()
+            y.join()
+            
+            logging.info("Main-Thread : all done")       
+        '''
+        08:39:40: Main-Thread : before creating thread
+        08:39:40: Main-Thread : before running thread
+        08:39:40: Sub-Thread First: starting
+        08:39:43: Sub-Thread First: finishing
+        08:39:43: Main-Thread : wait for the thread to finish
+        08:39:43: Sub-Thread Second: starting
+        08:39:46: Sub-Thread Second: finishing
+        08:39:46: Main-Thread : all done
+        ''' 
+        ```
+        (join을 해준순간 main_thread 는 대기하고 있기 때문에 y.start()가 시작되지 않음)
+- multiprocessing
+    - 예시 1
+        ```python
+        from multiprocessing import Process
+        import time
+        import logging
+
+        # 프로세스 실행 함수
+        def proc_func(name):
+
+            print("Sub-Process {}: starting".format(name))
+            time.sleep(3)
+            print("Sub-Process {}: finishing".format(name))
+
+        def main():
+            # Logging format 설정
+            format = "%(asctime)s: %(message)s"
+            logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+            
+
+            # 함수 인자 확인
+            p = Process(target=proc_func, args=('First',))
+
+            logging.info("Main-Process : before creating Process")
+            # 프로세스 시작
+            p.start()
+
+            logging.info("Main-Process : During Process")
+
+            # 프로세스 상태 확인
+            print(f'Process p is alive: {p.is_alive()}')
+
+        # 메인 시작
+        if __name__ == '__main__':
+            main()
+        '''
+        09:40:03: Main-Process : before creating Process
+        09:40:03: Main-Process : During Process
+        Process p is alive: True
+        Sub-Process First: starting
+        Sub-Process First: finishing
+        '''
+        ```
+        (메인 프로세스가 다 진행되더라도 서브 프로세스는 계속 진행됨)
+    - 예시 2 (join)
+        ```python
+        from multiprocessing import Process
+        import time
+        import logging
+
+        # 프로세스 실행 함수
+        def proc_func(name):
+
+            print("Sub-Process {}: starting".format(name))
+            time.sleep(3)
+            print("Sub-Process {}: finishing".format(name))
+
+        def main():
+            # Logging format 설정
+            format = "%(asctime)s: %(message)s"
+            logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+            
+
+            # 함수 인자 확인
+            p = Process(target=proc_func, args=('First',))
+
+            logging.info("Main-Process : before creating Process")
+            # 프로세스 시작
+            p.start()
+
+            logging.info("Main-Process : During Process")
+
+            logging.info("Main-Process : Joined Process")
+            p.join()
+
+            # 프로세스 상태 확인
+            print(f'Process p is alive: {p.is_alive()}')
+
+        # 메인 시작
+        if __name__ == '__main__':
+            main()
+        '''
+        09:41:16: Main-Process : before creating Process
+        09:41:16: Main-Process : During Process
+        09:41:16: Main-Process : Joined Process
+        Sub-Process First: starting
+        Sub-Process First: finishing
+        Process p is alive: False
+        '''
+        ```
+        (join을 걸어주게 되면 서브 프로세스가 끝나야지만 join한 다음시점으로 진행가능)
+    - 예시 3 (terminate)
+        ```python
+        from multiprocessing import Process
+        import time
+        import logging
+
+        # 프로세스 실행 함수
+        def proc_func(name):
+
+            print("Sub-Process {}: starting".format(name))
+            time.sleep(3)
+            print("Sub-Process {}: finishing".format(name))
+
+        def main():
+            # Logging format 설정
+            format = "%(asctime)s: %(message)s"
+            logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+            
+
+            # 함수 인자 확인
+            p = Process(target=proc_func, args=('First',))
+
+            logging.info("Main-Process : before creating Process")
+            # 프로세스 시작
+            p.start()
+
+            logging.info("Main-Process : During Process")
+            
+            time.sleep(0.1) # p가 실행되기도 전에 terminate 되는것을 방지
+            
+            logging.info("Main-Process : Terminated Process")
+            p.terminate()
+
+            time.sleep(0.1) # p가 강제로 종료되는 시간보다 다음 코드 진행이 빨라서 p.is_alive()가 True가 나옴을 방지
+            
+            # 프로세스 상태 확인
+            print(f'Process p is alive: {p.is_alive()}')
+
+        # 메인 시작
+        if __name__ == '__main__':
+            main()
+        '''
+        09:45:02: Main-Process : before creating Process
+        09:45:02: Main-Process : During Process
+        Sub-Process First: starting
+        09:45:02: Main-Process : Terminated Process
+        Process p is alive: False
+        '''
+        ```
+        (terminate를 통해 강제 종료 가능)
+    - 예시 4 (name 생성)
+        ```python
+        from multiprocessing import Process, current_process
+        import os
+        import random
+        import time
 
 
-            # 동시성 합계 계산 메인 함수
-            # 누적 합계 함수(제레네이터)
-            def sum_generator(n):
-                return sum(n for n in range(1, n+1))
+        # 실행 방법
+        def square(n):
+            # 랜덤 sleep
+            time.sleep(random.randint(1, 3))
+            process_id = os.getpid()
+            process_name = current_process().name
+            # 제곱
+            result = n * n
+            # 정보 출력
+            print(f"Process ID: {process_id}, Process Name: {process_name}")
+            print(f"Result of {n} square : {result}")
 
-            # wait
-            # as_completed
-            def main():
-                # Worker Count
-                worker = min(10, len(WORK_LIST))
-                
-                # 시작 시간
-                start_tm = time.time()
-                # Futures
-                futures_list = []
 
-                # 결과 건수
-                # ProcessPoolExecutor
-                with ThreadPoolExecutor(worker) as excutor:
-                    for work in WORK_LIST:
-                        # future 반환
-                        future = excutor.submit(sum_generator, work)
-                        # 스케쥴링
-                        futures_list.append(future)
-                        # 스케쥴링 확인
-                        print('Scheduled for {} : {}'.format(work, future))
-                        # print()
+        if __name__ == "__main__":
+            # 부모 프로세스 아이디
+            parent_process_id = os.getpid()
+            # 출력
+            print(f"Parent process ID {parent_process_id}")
+
+            # 프로세스 리스트  선언
+            processes = list()
+
+            # 프로세스 생성 및 실행
+            for i in range(1, 10): # 1 ~ 100 적절히 조절
+                # 생성
+                t = Process(name=str(i), target=square, args=(i,))
+
+                # 배열에 담기
+                processes.append(t)
+
+                # 시작
+                t.start()
+
+            # Join
+            for process in processes:
+                process.join()
+
+            # 종료
+            print("Main-Processing Done!")
+        '''
+        Parent process ID 42740
+        Process ID: 49856, Process Name: 4Process ID: 53988, Process Name: 3
+
+        Result of 3 square : 9
+        Result of 4 square : 16
+        Process ID: 35316, Process Name: 5
+        Result of 5 square : 25
+        Process ID: 38388, Process Name: 1
+        Result of 1 square : 1
+        Process ID: 7424, Process Name: 2
+        Result of 2 square : 4
+        Process ID: 54184, Process Name: 6
+        Result of 6 square : 36
+        Process ID: 8808, Process Name: 9Process ID: 49944, Process Name: 8
+
+        Result of 9 square : 81Result of 8 square : 64
+
+        Process ID: 50396, Process Name: 7
+        Result of 7 square : 49
+        Main-Processing Done!
+        '''
+        ```
+        (멀티 프로세스는 동시에 실행되므로 위와 같이 한번에 결과가 나오는 경우 존재)    
+        (join을 해두었기 때문에 모든 서브 프로세스가 종료되어야지만 메인 프로세스가 진행됨)
+- concurrent.Futures 을 사용하여 멀티쓰레딩과 멀티프로세싱 쉽게 사용가능
+    - futures 예시 (multi processing은 ThreadPoolExecutor를 ProcessPoolExecutor로 변경)
+        - result로 한번에 받아오는 경우(map 사용) -> 하나라도 끝나지 않으면 결과를 받아올 수 없음
+            - 예시 1 (multi thread)
+                ```python
+                import os
+                import time
+                from concurrent import futures
+
+                WORK_LIST = [100000, 1000000, 10000000, 10000000]
+
+                # 동시성 합계 계산 메인함수
+                # 누적 합계 함수(제네레이터)
+                def sum_generator(n):
+                    return sum(n for n in range(1, n+1))
+
+                def main():
+                    # Worker Count
+                    worker = min(10, len(WORK_LIST))
+                    # 시작 시간
+                    start_tm = time.time()
+                    # 결과 건수
+                    # ProcessPoolExecutor
+                    with futures.ThreadPoolExecutor(max_workers=worker) as excutor:
+                        # map -> 작업 순서 유지, 즉시 실행
+                        result = excutor.map(sum_generator, WORK_LIST)
+                    # 종료 시간
+                    end_tm = time.time() - start_tm
+                    # 출력 포멧
+                    msg = '\n Result -> {} Time : {:.2f}s'
+                    # 최종 결과 출력
+                    print(msg.format(list(result), end_tm))
+
+                # 실행
+                if __name__ == '__main__':
+                    main()
+                '''
+                Result -> [5000050000, 500000500000, 50000005000000, 50000005000000] Time : 0.84s
+                '''
+                ```
+            - 예시 2 (multi process)
+                ```python
+                import os
+                import time
+                from concurrent import futures
+
+                WORK_LIST = [100000, 1000000, 10000000, 10000000]
+
+                # 동시성 합계 계산 메인함수
+                # 누적 합계 함수(제네레이터)
+                def sum_generator(n):
+                    return sum(n for n in range(1, n+1))
+
+                def main():
+                    # Worker Count
+                    worker = min(10, len(WORK_LIST))
+                    # 시작 시간
+                    start_tm = time.time()
+                    # 결과 건수
+                    # ThreadPoolExecutor
+                    with futures.ProcessPoolExecutor(max_workers=worker) as excutor:
+                        # map -> 작업 순서 유지, 즉시 실행
+                        result = excutor.map(sum_generator, WORK_LIST)
+                    # 종료 시간
+                    end_tm = time.time() - start_tm
+                    # 출력 포멧
+                    msg = '\n Result -> {} Time : {:.2f}s'
+                    # 최종 결과 출력
+                    print(msg.format(list(result), end_tm))
+
+                # 실행
+                if __name__ == '__main__':
+                    main()
+                '''
+                Result -> [5000050000, 500000500000, 50000005000000, 50000005000000] Time : 0.59s
+                '''
+                ```
+        - result를 timeout안에 끝난 내용만 받아오기(submit) -> timeout안에 끝난 내용 받아옴
+            - 예시 1 (wait)
+                ```python
+                import os
+                import time
+                from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait, as_completed
+
+                WORK_LIST = [10000, 200000000, 1000000, 10000000]
+
+
+                # 동시성 합계 계산 메인 함수
+                # 누적 합계 함수(제레네이터)
+                def sum_generator(n):
+                    return sum(n for n in range(1, n+1))
+
+                # wait
+                # as_completed
+                def main():
+                    # Worker Count
+                    worker = min(10, len(WORK_LIST))
                     
-                    # as_completed 결과 출력
-                    for future in as_completed(futures_list,timeout=7):
-                        result = future.result()
-                        done = future.done()
-                        cancelled = future.cancelled
+                    # 시작 시간
+                    start_tm = time.time()
+                    # Futures
+                    futures_list = []
+
+                    # 결과 건수
+                    # ProcessPoolExecutor
+                    with ThreadPoolExecutor(worker) as excutor:
+                        for work in WORK_LIST:
+                            # future 반환
+                            future = excutor.submit(sum_generator, work)
+                            # 스케쥴링
+                            futures_list.append(future)
+                            # 스케쥴링 확인
+                            print('Scheduled for {} : {}'.format(work, future))
+                            # print()
                         
-                        # future 결과 확인
-                        print('Future Result : {}, Done : {}'.format(result, done))
-                        print('Future Cancelled : {}'.format(cancelled))
-                
+                        # wait 결과 출력
+                        result = wait(futures_list, timeout=7)
+                        # 성공
+                        print('Completed Tasks : ' + str(result.done))
+                        # 실패
+                        print('Pending ones after waiting for 7seconds : ' + str(result.not_done))
+                        # 결과 값 출력
+                        print([future.result() for future in result.done])
+                            
+                    # 종료 시간
+                    end_tm = time.time() - start_tm
+                    # 출력 포멧
+                    msg = '\n Time : {:.2f}s'
+                    # 최종 결과 출력
+                    print(msg.format(end_tm))
+
+                # 실행
+                if __name__ == '__main__':
+                    main()
+                '''
+                Scheduled for 10000 : <Future at 0x21797c72050 state=finished returned int>
+                Scheduled for 200000000 : <Future at 0x21797c72170 state=pending>
+                Scheduled for 1000000 : <Future at 0x21797d87310 state=running>
+                Scheduled for 10000000 : <Future at 0x21797d87610 state=running>
+                Completed Tasks : {<Future at 0x21797d87310 state=finished returned int>, <Future at 0x21797c72050 state=finished returned int>, <Future at 0x21797d87610 state=finished returned int>}
+                Pending ones after waiting for 7seconds : {<Future at 0x21797c72170 state=running>}
+                [500000500000, 50005000, 50000005000000]
+
+                Time : 7.99s
+                '''                
+                ```
+                (7초안에 끝난 3가지만 먼저 한번에 출력, 200000000는 7.99초가 걸려서 결과 출력이 안됨.)    
+                (wait는 timeout 시간이 지나더라도, timeout시간이 지난 task는 결과 출력이 되지 않을뿐 일은 계속 진행됨)
+            
+            - 예시 2 (as_completed)
+                ```python
+                import os
+                import time
+                from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, wait, as_completed
+
+                WORK_LIST = [10000, 200000000, 1000000, 10000000]
+
+
+                # 동시성 합계 계산 메인 함수
+                # 누적 합계 함수(제레네이터)
+                def sum_generator(n):
+                    return sum(n for n in range(1, n+1))
+
+                # wait
+                # as_completed
+                def main():
+                    # Worker Count
+                    worker = min(10, len(WORK_LIST))
+                    
+                    # 시작 시간
+                    start_tm = time.time()
+                    # Futures
+                    futures_list = []
+
+                    # 결과 건수
+                    # ProcessPoolExecutor
+                    with ThreadPoolExecutor(worker) as excutor:
+                        for work in WORK_LIST:
+                            # future 반환
+                            future = excutor.submit(sum_generator, work)
+                            # 스케쥴링
+                            futures_list.append(future)
+                            # 스케쥴링 확인
+                            print('Scheduled for {} : {}'.format(work, future))
+                            # print()
                         
-                # 종료 시간
-                end_tm = time.time() - start_tm
-                # 출력 포멧
-                msg = '\n Time : {:.2f}s'
-                # 최종 결과 출력
-                print(msg.format(end_tm))
+                        # as_completed 결과 출력
+                        for future in as_completed(futures_list,timeout=7):
+                            result = future.result()
+                            done = future.done()
+                            cancelled = future.cancelled
+                            
+                            # future 결과 확인
+                            print('Future Result : {}, Done : {}'.format(result, done))
+                            print('Future Cancelled : {}'.format(cancelled))
+                    
+                            
+                    # 종료 시간
+                    end_tm = time.time() - start_tm
+                    # 출력 포멧
+                    msg = '\n Time : {:.2f}s'
+                    # 최종 결과 출력
+                    print(msg.format(end_tm))
 
-            # 실행
-            if __name__ == '__main__':
-                main()
+                # 실행
+                if __name__ == '__main__':
+                    main()
+                '''
+                Scheduled for 10000 : <Future at 0x1d5de9c2050 state=finished returned int>
+                Scheduled for 200000000 : <Future at 0x1d5de9c2170 state=pending>
+                Scheduled for 1000000 : <Future at 0x1d5dead7310 state=running>
+                Scheduled for 10000000 : <Future at 0x1d5dead72e0 state=pending>
+                Future Result : 50005000, Done : True
+                Future Cancelled : <bound method Future.cancelled of <Future at 0x1d5de9c2050 state=finished returned int>>
+                Future Result : 500000500000, Done : True
+                Future Cancelled : <bound method Future.cancelled of <Future at 0x1d5dead7310 state=finished returned int>>
+                Future Result : 50000005000000, Done : True
+                Future Cancelled : <bound method Future.cancelled of <Future at 0x1d5dead72e0 state=finished returned int>>
+
+                raise TimeoutError(concurrent.futures._base.TimeoutError: 1 (of 4) futures unfinished
+                '''
+
+                ```
+                (as_completed는 출력 결과를 한번에 출력하는 것이 아니라 먼저 끝나면 바로 출력을 해줌.)   
+                (as_completed는 timeout시간이 지나게 되면 무조건 종료시켜버림)
+- 쓰레드에서 동기화(뮤텍스)
+    - 동기화의 필요성
+        ```python
+        import logging
+        from concurrent.futures import ThreadPoolExecutor
+        import time
+
+
+        class FakeDataStore:
+            # 공유 변수(value)
+            def __init__(self):
+                self.value = 0
+
+            # 변수 업데이트 함수
+            def update(self, n):
+                logging.info("Thread %s: starting update", n)
+
+                # 뮤텍스 & Lock 등 동기화(Thread synchronization) 필요
+                local_copy = self.value
+                local_copy += 1
+                time.sleep(0.1)
+                self.value = local_copy
+
+                logging.info("Thread %s: finishing update", n)
+
+
+        if __name__ == "__main__":
+            # Logging format 설정
+            format = "%(asctime)s: %(message)s"
+            logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+            # 클래스 인스턴스화
+            store = FakeDataStore()
+
+            logging.info("Testing update. Starting value is %d.", store.value)
+
+            # With Context 시작
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                for n in ['First', 'Second', 'Third']:
+                    executor.submit(store.update, n)
+
+            logging.info("Testing update. Ending value is %d.", store.value)
+        '''
+        09:11:39: Testing update. Starting value is 0.
+        09:11:39: Thread First: starting update
+        09:11:39: Thread Second: starting update
+        09:11:39: Thread Third: starting update
+        09:11:39: Thread Second: finishing update
+        09:11:39: Thread First: finishing update
+        09:11:39: Thread Third: finishing update
+        09:11:39: Testing update. Ending value is 1.
+        '''
+        ```
+        (우리가 원하는 값은 3이지만 결과값이 1 -> 값은 1개이지만 사용하는 사람이 3명이라 동기화 문제 발생 )
+    - 동기화 문제 해결
+        - 예시 1
+            ```python
+            import logging
+            from concurrent.futures import ThreadPoolExecutor
+            import time
+            import threading
+
+
+            class FakeDataStore:
+                # 공유 변수(value)
+                def __init__(self):
+                    self.value = 0
+                    # Lock 선언
+                    self._lock = threading.Lock()
+
+                # 변수 업데이트 함수
+                def update(self, n):
+                    logging.info("Thread %s: starting update", n)
+
+                    # 뮤텍스 & Lock 등 동기화(Thread synchronization) 필요
+                    
+                    # Lock 획득(방법1)
+                    self._lock.acquire()
+                    logging.info("Thread %s has lock", n)
+                    
+                    local_copy = self.value
+                    local_copy += 1
+                    time.sleep(2)
+                    self.value = local_copy
+
+                    logging.info("Thread %s about to release lock", n)
+
+                    # Lock 반환
+                    self._lock.release()
+                    
+                    logging.info("Thread %s: finishing update", n)
+
+            if __name__ == "__main__":
+                # Logging format 설정
+                format = "%(asctime)s: %(message)s"
+                logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+                # 클래스 인스턴스화
+                store = FakeDataStore()
+
+                logging.info("Testing update. Starting value is %d.", store.value)
+
+                # With Context 시작
+                with ThreadPoolExecutor(max_workers=3) as executor:
+                    for n in ['First', 'Second', 'Third']:
+                        executor.submit(store.update, n)
+
+                logging.info("Testing update. Ending value is %d.", store.value)
             '''
-            Scheduled for 10000 : <Future at 0x1d5de9c2050 state=finished returned int>
-            Scheduled for 200000000 : <Future at 0x1d5de9c2170 state=pending>
-            Scheduled for 1000000 : <Future at 0x1d5dead7310 state=running>
-            Scheduled for 10000000 : <Future at 0x1d5dead72e0 state=pending>
-            Future Result : 50005000, Done : True
-            Future Cancelled : <bound method Future.cancelled of <Future at 0x1d5de9c2050 state=finished returned int>>
-            Future Result : 500000500000, Done : True
-            Future Cancelled : <bound method Future.cancelled of <Future at 0x1d5dead7310 state=finished returned int>>
-            Future Result : 50000005000000, Done : True
-            Future Cancelled : <bound method Future.cancelled of <Future at 0x1d5dead72e0 state=finished returned int>>
-
-            raise TimeoutError(concurrent.futures._base.TimeoutError: 1 (of 4) futures unfinished
+            09:10:16: Testing update. Starting value is 0.
+            09:10:16: Thread First: starting update
+            09:10:16: Thread First has lock
+            09:10:16: Thread Second: starting update
+            09:10:16: Thread Third: starting update
+            09:10:18: Thread First about to release lock
+            09:10:18: Thread First: finishing update
+            09:10:18: Thread Second has lock
+            09:10:20: Thread Second about to release lock
+            09:10:20: Thread Second: finishing update
+            09:10:20: Thread Third has lock
+            09:10:22: Thread Third about to release lock
+            09:10:22: Thread Third: finishing update
+            09:10:22: Testing update. Ending value is 3.
             '''
-
             ```
-            (as_completed는 출력 결과를 한번에 출력하는 것이 아니라 먼저 끝나면 바로 출력을 해줌.)   
-            (as_completed는 timeout시간이 지나게 되면 무조건 종료시켜버림)
+            (단, 이런 경우 열쇠를 가지고 있는 사람만이 접근이 가능하기 때문에 이미 그 값을 사용중이라면 그 값을 변경하거나 사용하고 싶은 사람은 대기해야함)
+        - 예시 2 (다른 스레드에서 공유하는 변수가 아닌 다른 작업을 실행할때)
+            ```python
+            import logging
+            from concurrent.futures import ThreadPoolExecutor
+            import time
+            import threading
+
+
+            class FakeDataStore:
+                # 공유 변수(value)
+                def __init__(self):
+                    self.value = 0
+                    # Lock 선언
+                    self._lock = threading.Lock()
+
+                # 변수 업데이트 함수
+                def update(self, n):
+                    logging.info("Thread %s: starting update", n)
+
+                    # 뮤텍스 & Lock 등 동기화(Thread synchronization) 필요
+                    
+                    # Lock 획득(방법1)
+                    self._lock.acquire()
+                    logging.info("Thread %s has lock", n)
+                    
+                    local_copy = self.value
+                    local_copy += 1
+                    time.sleep(10)
+                    self.value = local_copy
+
+                    logging.info("Thread %s about to release lock", n)
+
+                    # Lock 반환
+                    self._lock.release()
+                    
+                    logging.info("Thread %s: finishing update", n)
+                    
+            def thread_func(name):
+                logging.info(f"Sub-Thread {name}: starting")
+                time.sleep(3)
+                logging.info(f"Sub-Thread {name}: finishing")
+                
+            if __name__ == "__main__":
+                # Logging format 설정
+                format = "%(asctime)s: %(message)s"
+                logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+                # 클래스 인스턴스화
+                store = FakeDataStore()
+
+                logging.info("Testing update. Starting value is %d.", store.value)
+
+                # With Context 시작
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    for n in ['First', 'Second', 'Third']:
+                        executor.submit(store.update, n)
+                    executor.submit(thread_func,['Fourth'])
+                logging.info("Testing update. Ending value is %d.", store.value)
+            '''
+            09:04:55: Testing update. Starting value is 0.
+            09:04:55: Thread First: starting update
+            09:04:55: Thread First has lock
+            09:04:55: Thread Second: starting update
+            09:04:55: Thread Third: starting update
+            09:04:55: Sub-Thread ['Fourth']: starting
+            09:04:58: Sub-Thread ['Fourth']: finishing
+            09:05:05: Thread First about to release lock
+            09:05:05: Thread First: finishing update
+            09:05:05: Thread Second has lock
+            09:05:15: Thread Second about to release lock
+            09:05:15: Thread Second: finishing update
+            09:05:15: Thread Third has lock
+            09:05:25: Thread Third about to release lock
+            09:05:25: Thread Third: finishing update
+            09:05:25: Testing update. Ending value is 3.            
+            '''
+            ```
+            (threading lock 걸린 변수가 아닌 변수에 다른 쓰레드가 접근한다면 그 쓰레드는 대기하지 않고 처리가 됨)
+        - 예시 3 (with 문 사용, with 문은 커스터마이징 가능하기때문에 더 좋음)
+            ```python
+            import logging
+            from concurrent.futures import ThreadPoolExecutor
+            import time
+            import threading
+
+
+            class FakeDataStore:
+                # 공유 변수(value)
+                def __init__(self):
+                    self.value = 0
+                    # Lock 선언
+                    self._lock = threading.Lock()
+
+                # 변수 업데이트 함수
+                def update(self, n):
+                    logging.info("Thread %s: starting update", n)
+
+                    # 뮤텍스 & Lock 등 동기화(Thread synchronization) 필요
+
+                    # Lock 획득(방법2)
+                    with self._lock:
+                        logging.info("Thread %s has lock", n)
+
+                        local_copy = self.value
+                        local_copy += 1
+                        time.sleep(0.1)
+                        self.value = local_copy
+
+                        logging.info("Thread %s about to release lock", n)
+                    
+                    logging.info("Thread %s: finishing update", n)
+
+
+            if __name__ == "__main__":
+                # Logging format 설정
+                format = "%(asctime)s: %(message)s"
+                logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+
+                # 클래스 인스턴스화
+                store = FakeDataStore()
+
+                logging.info("Testing update. Starting value is %d.", store.value)
+
+                # With Context 시작
+                with ThreadPoolExecutor(max_workers=3) as executor:
+                    for n in ['First', 'Second', 'Third']:
+                        executor.submit(store.update, n)
+
+                logging.info("Testing update. Ending value is %d.", store.value)
+            '''
+            09:15:11: Testing update. Starting value is 0.
+            09:15:11: Thread First: starting update
+            09:15:11: Thread First has lock
+            09:15:11: Thread Second: starting update
+            09:15:11: Thread Third: starting update
+            09:15:11: Thread First about to release lock
+            09:15:11: Thread First: finishing update
+            09:15:11: Thread Second has lock
+            09:15:11: Thread Second about to release lock
+            09:15:11: Thread Second: finishing update
+            09:15:11: Thread Third has lock
+            09:15:11: Thread Third about to release lock
+            09:15:11: Thread Third: finishing update
+            09:15:11: Testing update. Ending value is 3.
+            '''
+            ```
+- 프로세스에서 메모리 공유 예제
+    - 공유하지 못하는 경우
+        ```python
+        from multiprocessing import Process, current_process
+        import os
+
+        # 프로세스 메모리 공유 예제(공유X)
+
+        # 실행함수
+        def generate_update_number(v: int):
+            for _ in range(50):
+                v += 1
+            print(current_process().name, "data", v)
+            
+        def main():
+            # 부모 프로세스 아이디
+            parent_process_id = os.getpid()
+            # 출력
+            print(f'Parent process ID {parent_process_id}')
+            
+            # 프로세스 리스트 선언
+            processes = list()
+            
+            # 프로세스 메모리 공유 변수
+            share_value = 0
+            
+            for _ in range(1, 10):
+                # 생성
+                p = Process(target=generate_update_number, args=(share_value,))
+                # 배열에 담기
+                processes.append(p)
+                # 실행
+                p.start()
+                
+            # Join
+            for p in processes:
+                p.join()
+                
+            # 최종 프로세스 부모 변수 확인
+            print('Final Data in parent process', share_value)
+
+        if __name__ == '__main__':
+            main()
+        '''
+        Parent process ID 52668
+        Process-1 data 50
+        Process-2 data 50
+        Process-3 data 50
+        Process-5 data 50
+        Process-6 data 50
+        Process-7 data 50
+        Process-8 data 50
+        Process-9 data 50
+        Final Data in parent process 0
+        '''
+        ```
+    - 공유하는 예시 1
+        ```python
+        from multiprocessing import Process, current_process, Value, Array
+        import random
+        import os
+
+        # 프로세스 메모리 공유 예제(공유 O)
+
+        # 프로세스 동기화 관련 참고
+        # https://docs.python.org/3/library/multiprocessing.html#synchronization-between-processes
+
+
+        # 실행 함수
+        def generate_update_number(v : int):
+            for i in range(50):
+                v.value += 1
+            print(current_process().name, "data", v.value)
+
+        def main():
+            # 부모 프로세스 아이디
+            parent_process_id = os.getpid()
+            # 출력
+            print(f"Parent process ID {parent_process_id}")
+
+            # 프로세스 리스트  선언
+            processes = list()
+
+            # 프로세스 메모리 공유 변수
+            # from multiprocessing import shared_memory 사용 가능(파이썬 3.8)
+            # from multiprocessing import Manager 사용 가능
+            # https://docs.python.org/3/library/multiprocessing.html#sharing-state-between-processes(Manager 사용 가능)
+            
+            # share_numbers = Array('i', range(50)) # i, c 등 Flag 확인
+            share_value = Value('i', 0)
+            for _ in range(1,10):
+                # 생성
+                p = Process(target=generate_update_number, args=(share_value,))
+                # 배열에 담기
+                processes.append(p)
+                # 실행
+                p.start()
+                
+            # Join
+            for p in processes:
+                p.join()
+
+            # 최종 프로세스 부모 변수 확인
+            print("Final Data(share_value) in parent process",  share_value.value)
+
+        if __name__ == '__main__':
+            main()
+        '''
+        Parent process ID 50684
+        Process-1 data 50
+        Process-2 data 100
+        Process-3 data 150
+        Process-4 data 200
+        Process-5 data 250
+        Process-6 data 300
+        Process-7 data 350
+        Process-8 data 400
+        Process-9 data 450
+        Final Data(share_value) in parent process 450
+        '''
+        ```
+    - 공유하는 예시 2
+        ```python
+        from multiprocessing import Process, Manager
+
+        def f(d, l):
+            d[1] = '1'
+            d['2'] = 2
+            d[0.25] = None
+            l.reverse()
+
+        if __name__ == '__main__':
+            with Manager() as manager:
+                d = manager.dict()
+                l = manager.list(range(10))
+
+                p = Process(target=f, args=(d, l))
+                p.start()
+                p.join()
+
+                print(d)
+                print(l)
+        '''
+        {1: '1', '2': 2, 0.25: None}
+        [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+        '''
+        ```
+    - 공유하는 예시 3
+        ```python
+        from multiprocessing import Process, Value, Array
+
+        def f(n, a):
+            n.value = 3.1415927
+            for i in range(len(a)):
+                a[i] = -a[i]
+
+        if __name__ == '__main__':
+            # 'd' indicates a double precision float and 'i' indicates a signed integer. 
+            num = Value('d', 0.0)
+            arr = Array('i', range(10)) 
+
+            p = Process(target=f, args=(num, arr))
+            p.start()
+            p.join()
+
+            print(num.value)
+            print(arr[:])
+        '''
+        3.1415927
+        [0, -1, -2, -3, -4, -5, -6, -7, -8, -9]
+        '''
+        ```
+- 쓰레드에서 데이터 통신(생산자 소비자 패턴(Producer-Consumer Pattern))
+    - 멀티스레드 디자인 패턴의 정석 -> 생산자 소비자 패턴
+    - 참고(Python Event 객체)
+        - `Flag 초기값(0)`
+        - `Set() -> 1`, `Clear() -> 0`, `Wait(1 -> 리턴, 0 -> 대기)`, `isSet() -> 현 플래그 상태`
+    - multi thread(using queue)
+        ```python
+        import concurrent.futures
+        import logging
+        import queue
+        import random
+        import threading
+        import time
+
+        # 생산자
+        def producer(queue, event):
+            """네트워크 대기 상태라 가정(서버)"""
+            while not event.is_set():
+                message = random.randint(1, 11)
+                logging.info("Producer got message: %s", message)
+                queue.put(message)
+
+            logging.info("Producer received event. Exiting")
+
+        # 소비자
+        def consumer(queue, event):
+            """응답 받고 소비하는 것으로 가정 or DB 저장"""
+            while not event.is_set() or not queue.empty():
+                message = queue.get()
+                logging.info(
+                    "Consumer storing message: %s (size=%d)", message, queue.qsize()
+                )
+
+            logging.info("Consumer received event. Exiting")
+
+        if __name__ == "__main__":
+            # Logging format 설정
+            format = "%(asctime)s: %(message)s"
+            logging.basicConfig(format=format, level=logging.INFO,
+                                datefmt="%H:%M:%S")
+
+            # 사이즈 중요 (소비량에 맞게 queue maxsize 조절)
+            pipeline = queue.Queue(maxsize=10)
+
+            # 이벤트 플래그 초기 값 0
+            event = threading.Event()
+
+            # With Context 시작
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                executor.submit(producer, pipeline, event)
+                executor.submit(consumer, pipeline, event)
+
+                # 실행 시간 조정
+                time.sleep(0.01)
+
+                # 프로그램 종료
+                event.set()
+                logging.info("Main: about to set event")
+        '''
+        09:29:25: Producer got message: 11
+        09:29:25: Producer got message: 5
+        09:29:25: Consumer storing message: 11 (size=0)
+        09:29:25: Producer got message: 4
+        09:29:25: Consumer storing message: 5 (size=0)
+        09:29:25: Producer got message: 5
+        09:29:25: Consumer storing message: 4 (size=0)
+        09:29:25: Producer got message: 1
+        09:29:25: Consumer storing message: 5 (size=0)
+        09:29:25: Producer got message: 11
+        09:29:25: Consumer storing message: 1 (size=0)
+        09:29:25: Producer got message: 11
+        09:29:25: Consumer storing message: 11 (size=0)
+        09:29:25: Producer got message: 3
+        09:29:25: Consumer storing message: 11 (size=0)
+        09:29:25: Producer got message: 2
+        09:29:25: Consumer storing message: 3 (size=0)
+        09:29:25: Producer got message: 9
+        09:29:25: Consumer storing message: 2 (size=0)
+        09:29:25: Producer got message: 10
+        09:29:25: Consumer storing message: 9 (size=0)
+        09:29:25: Producer got message: 3
+        09:29:25: Consumer storing message: 10 (size=0)
+        09:29:25: Producer got message: 11
+        09:29:25: Consumer storing message: 3 (size=0)
+        09:29:25: Producer got message: 5
+        09:29:25: Consumer storing message: 11 (size=0)
+        09:29:25: Producer got message: 10
+        09:29:25: Consumer storing message: 5 (size=0)
+        09:29:25: Producer got message: 2
+        09:29:25: Consumer storing message: 10 (size=0)
+        09:29:25: Producer got message: 6
+        09:29:25: Consumer storing message: 2 (size=0)
+        09:29:25: Producer got message: 10
+        09:29:25: Consumer storing message: 6 (size=0)
+        09:29:25: Producer got message: 11
+        09:29:25: Consumer storing message: 10 (size=0)
+        09:29:25: Producer got message: 2
+        09:29:25: Consumer storing message: 11 (size=0)
+        09:29:25: Producer got message: 9
+        09:29:25: Consumer storing message: 2 (size=0)
+        09:29:25: Producer got message: 5
+        09:29:25: Consumer storing message: 9 (size=0)
+        09:29:25: Producer got message: 8
+        09:29:25: Consumer storing message: 5 (size=0)
+        09:29:25: Producer got message: 10
+        09:29:25: Consumer storing message: 8 (size=0)
+        09:29:25: Producer got message: 3
+        09:29:25: Consumer storing message: 10 (size=0)
+        09:29:25: Producer got message: 9
+        09:29:25: Consumer storing message: 3 (size=0)
+        09:29:25: Producer got message: 3
+        09:29:25: Consumer storing message: 9 (size=0)
+        09:29:25: Producer got message: 10
+        09:29:25: Consumer storing message: 3 (size=0)
+        09:29:25: Producer got message: 1
+        09:29:25: Consumer storing message: 10 (size=0)
+        09:29:25: Producer got message: 9
+        09:29:25: Consumer storing message: 1 (size=0)
+        09:29:25: Producer got message: 1
+        09:29:25: Consumer storing message: 9 (size=0)
+        09:29:25: Producer got message: 8
+        09:29:25: Consumer storing message: 1 (size=0)
+        09:29:25: Producer got message: 3
+        09:29:25: Consumer storing message: 8 (size=0)
+        09:29:25: Producer got message: 6
+        09:29:25: Consumer storing message: 3 (size=0)
+        09:29:25: Producer got message: 9
+        09:29:25: Consumer storing message: 6 (size=0)
+        09:29:25: Producer got message: 10
+        09:29:25: Consumer storing message: 9 (size=0)
+        09:29:25: Producer got message: 10
+        09:29:25: Consumer storing message: 10 (size=0)
+        09:29:25: Producer got message: 5
+        09:29:25: Consumer storing message: 10 (size=0)
+        09:29:25: Producer got message: 11
+        09:29:25: Consumer storing message: 5 (size=0)
+        09:29:25: Producer got message: 7
+        09:29:25: Consumer storing message: 11 (size=0)
+        09:29:25: Producer got message: 1
+        09:29:25: Consumer storing message: 7 (size=0)
+        09:29:25: Producer got message: 2
+        09:29:25: Consumer storing message: 1 (size=0)
+        09:29:25: Producer got message: 10
+        09:29:25: Consumer storing message: 2 (size=0)
+        09:29:25: Producer got message: 11
+        09:29:25: Consumer storing message: 10 (size=0)
+        09:29:25: Main: about to set event
+        09:29:25: Producer received event. Exiting
+        09:29:25: Consumer storing message: 11 (size=0)
+        09:29:25: Consumer received event. Exiting
+        '''
+        ```
+        (time.sleep 시간만큼 producer와 consumer가 무한루프를 돌게 됨. time.sleep시간이 끝나게 되면 event.set()이 실행되면서 1이 되게 되고 while문이 종료되게 됨. 마지막으로 consumer에서 queue에 남아있는 데이터들을 소진시키고 종료.)
 
 #### References
 - [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
-
+- [고수가 되는 파이썬 : 동시성과 병렬성 문법 배우기](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%99%84%EC%84%B1-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90/dashboard)
+- https://docs.python.org/3/library/multiprocessing.html#sharing-state-between-processes
 ---
 
 ## #20
 
-###
-
+### async IO(Asynchoronous I/O)
+- async IO는 코루틴(Coroutine)작업을 쉽게 할 수 있게 만들어 놓은 것
+- [코루틴](#17) 참고
 
 
 #### References
@@ -1859,7 +2916,8 @@
 
 ## #21
 
-###
+### logging
+- 
 
 
 
