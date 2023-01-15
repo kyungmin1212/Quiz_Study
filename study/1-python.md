@@ -19,7 +19,7 @@
 - [코루틴(Coroutine)](#17)
 - [GIL(Global Interpreter Lock)](#18)
 - [multi threading / multi processing](#19)
-- [CPU Bound vs I/O bOUND (Multiprocessing vs Threading vs AsyncIO) (Cf. Blocking IO, Non-Blocking IO, Sync, ASync)](#20)
+- [CPU Bound vs I/O Bound (Multiprocessing vs Threading vs AsyncIO) (cf. Concurrency(동시성) vs Parallelism(병렬성) // Blocking IO vs Non-Blocking IO // Sync vs ASync)](#20)
 - [hasattr / getattr / setattr](#21)
 ---
 
@@ -3004,14 +3004,51 @@
 
 ## #20
 
-### CPU Bound vs I/O bOUND (Multiprocessing vs Threading vs AsyncIO) (Cf. Blocking IO, Non-Blocking IO, Sync, ASync)
+### CPU Bound vs I/O Bound (Multiprocessing vs Threading vs AsyncIO) (cf. Concurrency(동시성) vs Parallelism(병렬성) // Blocking IO vs Non-Blocking IO // Sync vs ASync)
+- Concurrency(동시성) vs Parallelism(병렬성)
+    - 참고 : https://github.com/kyungmin1212/Quiz_Study/blob/main/study/2-operating_system.md#1
+    - Concurrency(동시성)
+        - CPU 가용성 극대화 위해 Parallelism 의 단점 및 어려움을 소프트웨어(구현)레벨에서 해결하기 위한 방법
+        - 싱글코어에서 멀티스레드 패턴으로 작업을 처리
+        - 동시 작업에 있어서 일정양 처리 후 다음 작업으로 넘기는 방식
+        - 즉, 제어권 주고 받으며 작업 처리 패턴, 병렬적은 아니나, 유사한 처리 방식
+    - Concurrency(동시성) vs Parallelism(병렬성) 비교
+        - 동시성 : 논리적, 동시 실행 패턴(논리적), 싱글코어(멀티스레드 패턴), 한 개의 작업 공유 처리, 디버깅 매우 어려움, Mutex, Deadlock
+        - 병렬성 : 물리적, 물리적 동시 실행, 멀티 코어에서 구현 가능, 주로 별개의 작업 처리, 디버깅 어려움, OpenMP, MPI, CUDA
+
+- Blocking vs Non-blocking
+    - Blocking IO
+        - 시스템 콜 요청시 -> 커널 IO 작업 완료 시까지 응답 대기
+        - 제어권(IO작업) -> 커널 소유 -> 응답(Response)전 까지 대기(Block) ->  다른 작업 수행 불가(대기)
+    - Non-blocking IO
+        - 시스템 콜 요청시 -> 커널 IO 작업 완료 여부 상관없이 즉시 응답
+        - 제어권(IO작업) -> 유저 프로세스 전달 -> 다른 작업 수행 가능(지속) -> 주기적 시스템 콜 통해서 IO 작업 완료 여부 확인
+
+- Async vs Sync
+    - Async 
+        - system call의 완료를 기다리지 않으면 Asynchronous
+    - Sync
+        - system call의 완료를 기다리면 synchronous
+
+- Blocking, Non-blocking, Asynchronous, Synchronous의 명백한 비교
+    - 블로킹 Blocking
+        - A 함수가 B 함수를 호출 할 때, B 함수가 자신의 작업이 종료되기 전까지 A 함수에게 제어권을 돌려주지 않는 것
+    - 논블로킹 Non-blocking
+        - A 함수가 B 함수를 호출 할 때, B 함수가 제어권을 바로 A 함수에게 넘겨주면서, A 함수가 다른 일을 할 수 있도록 하는 것.
+    - 동기 Synchronous
+        - A 함수가 B 함수를 호출 할 때, B 함수의 결과를 A 함수가 처리하는 것.
+    - 비동기 Asynchronous
+        - A 함수가 B 함수를 호출 할 때, B 함수의 결과를 B 함수가 처리하는 것. (callback)
+
 
 - async IO는 코루틴(Coroutine)작업을 쉽게 할 수 있게 만들어 놓은 것
+
 - [코루틴](#17) 참고
 
 
 #### References
-
+- [고수가 되는 파이썬 : 동시성과 병렬성 문법 배우기](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%99%84%EC%84%B1-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90/dashboard)
+- https://jh-7.tistory.com/25
 ---
 
 ## #21
