@@ -20,7 +20,7 @@
 - [GIL(Global Interpreter Lock)](#18)
 - [multi threading / multi processing](#19)
 - [CPU Bound vs I/O bOUND (Multiprocessing vs Threading vs AsyncIO) (Cf. Blocking IO, Non-Blocking IO, Sync, ASync)](#20)
-- [hasattr / getattr / setattr] (#21)
+- [hasattr / getattr / setattr](#21)
 ---
 
 ## #1
