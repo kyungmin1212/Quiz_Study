@@ -19,6 +19,8 @@
 - [코루틴(Coroutine)](#17)
 - [GIL(Global Interpreter Lock)](#18)
 - [multi threading / multi processing](#19)
+- [CPU Bound vs I/O bOUND (Multiprocessing vs Threading vs AsyncIO) (Cf. Blocking IO, Non-Blocking IO, Sync, ASync)](#20)
+- [hasattr / getattr / setattr] (#21)
 ---
 
 ## #1
@@ -3002,7 +3004,8 @@
 
 ## #20
 
-### async IO(Asynchoronous I/O)
+### CPU Bound vs I/O bOUND (Multiprocessing vs Threading vs AsyncIO) (Cf. Blocking IO, Non-Blocking IO, Sync, ASync)
+
 - async IO는 코루틴(Coroutine)작업을 쉽게 할 수 있게 만들어 놓은 것
 - [코루틴](#17) 참고
 
@@ -3013,10 +3016,38 @@
 
 ## #21
 
-### logging
-- 
+### hasattr / getattr / setattr 
+- hasattr : 클래스내의 어트리뷰트(변수,함수)가 있는지 확인할때 사용함
+    ```python
+    class cls:
+    a = 1
+    def b(self):
+        pass
 
+    # cls에 b라는 멤버가 있는지 확인
+    print(hasattr(cls, 'a'))
+    print(hasattr(cls, 'b'))
+    '''
+    True
+    True
+    '''
+    ```
+- getattr : 클래스내의 어트리뷰트(변수,함수)을 가져올때 사용
+- setattr : 클래스내의 어트리뷰트(변수,함수)을 변경할때 사용
+    ```python
+    class cls:
+        a = 1
+        def b(self):
+            pass
 
+    print(getattr(cls, 'a'))
+    setattr(cls, 'a', 9)
+    print(getattr(cls, 'a'))
+    '''
+    1
+    9
+    '''
+    ```
 
 #### References
 
