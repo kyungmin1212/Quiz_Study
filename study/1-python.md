@@ -15,7 +15,10 @@
 - [reduce, partial](#13)
 - [global, local, nonlocal](#14)
 - [클로저(closure)](#15)
-
+- [데코레이터(Decorator)](#16)
+- [코루틴(Coroutine)](#17)
+- [GIL(Global Interpreter Lock)](#18)
+- [multi threading / multi processing](#19)
 ---
 
 ## #1
@@ -2809,82 +2812,8 @@
         09:29:25: Consumer storing message: 5 (size=0)
         09:29:25: Producer got message: 5
         09:29:25: Consumer storing message: 4 (size=0)
-        09:29:25: Producer got message: 1
-        09:29:25: Consumer storing message: 5 (size=0)
-        09:29:25: Producer got message: 11
-        09:29:25: Consumer storing message: 1 (size=0)
-        09:29:25: Producer got message: 11
-        09:29:25: Consumer storing message: 11 (size=0)
-        09:29:25: Producer got message: 3
-        09:29:25: Consumer storing message: 11 (size=0)
-        09:29:25: Producer got message: 2
-        09:29:25: Consumer storing message: 3 (size=0)
-        09:29:25: Producer got message: 9
-        09:29:25: Consumer storing message: 2 (size=0)
-        09:29:25: Producer got message: 10
-        09:29:25: Consumer storing message: 9 (size=0)
-        09:29:25: Producer got message: 3
-        09:29:25: Consumer storing message: 10 (size=0)
-        09:29:25: Producer got message: 11
-        09:29:25: Consumer storing message: 3 (size=0)
-        09:29:25: Producer got message: 5
-        09:29:25: Consumer storing message: 11 (size=0)
-        09:29:25: Producer got message: 10
-        09:29:25: Consumer storing message: 5 (size=0)
-        09:29:25: Producer got message: 2
-        09:29:25: Consumer storing message: 10 (size=0)
-        09:29:25: Producer got message: 6
-        09:29:25: Consumer storing message: 2 (size=0)
-        09:29:25: Producer got message: 10
-        09:29:25: Consumer storing message: 6 (size=0)
-        09:29:25: Producer got message: 11
-        09:29:25: Consumer storing message: 10 (size=0)
-        09:29:25: Producer got message: 2
-        09:29:25: Consumer storing message: 11 (size=0)
-        09:29:25: Producer got message: 9
-        09:29:25: Consumer storing message: 2 (size=0)
-        09:29:25: Producer got message: 5
-        09:29:25: Consumer storing message: 9 (size=0)
-        09:29:25: Producer got message: 8
-        09:29:25: Consumer storing message: 5 (size=0)
-        09:29:25: Producer got message: 10
-        09:29:25: Consumer storing message: 8 (size=0)
-        09:29:25: Producer got message: 3
-        09:29:25: Consumer storing message: 10 (size=0)
-        09:29:25: Producer got message: 9
-        09:29:25: Consumer storing message: 3 (size=0)
-        09:29:25: Producer got message: 3
-        09:29:25: Consumer storing message: 9 (size=0)
-        09:29:25: Producer got message: 10
-        09:29:25: Consumer storing message: 3 (size=0)
-        09:29:25: Producer got message: 1
-        09:29:25: Consumer storing message: 10 (size=0)
-        09:29:25: Producer got message: 9
-        09:29:25: Consumer storing message: 1 (size=0)
-        09:29:25: Producer got message: 1
-        09:29:25: Consumer storing message: 9 (size=0)
-        09:29:25: Producer got message: 8
-        09:29:25: Consumer storing message: 1 (size=0)
-        09:29:25: Producer got message: 3
-        09:29:25: Consumer storing message: 8 (size=0)
-        09:29:25: Producer got message: 6
-        09:29:25: Consumer storing message: 3 (size=0)
-        09:29:25: Producer got message: 9
-        09:29:25: Consumer storing message: 6 (size=0)
-        09:29:25: Producer got message: 10
-        09:29:25: Consumer storing message: 9 (size=0)
-        09:29:25: Producer got message: 10
-        09:29:25: Consumer storing message: 10 (size=0)
-        09:29:25: Producer got message: 5
-        09:29:25: Consumer storing message: 10 (size=0)
-        09:29:25: Producer got message: 11
-        09:29:25: Consumer storing message: 5 (size=0)
-        09:29:25: Producer got message: 7
-        09:29:25: Consumer storing message: 11 (size=0)
-        09:29:25: Producer got message: 1
-        09:29:25: Consumer storing message: 7 (size=0)
-        09:29:25: Producer got message: 2
-        09:29:25: Consumer storing message: 1 (size=0)
+        ...
+        
         09:29:25: Producer got message: 10
         09:29:25: Consumer storing message: 2 (size=0)
         09:29:25: Producer got message: 11
@@ -2896,6 +2825,174 @@
         '''
         ```
         (time.sleep 시간만큼 producer와 consumer가 무한루프를 돌게 됨. time.sleep시간이 끝나게 되면 event.set()이 실행되면서 1이 되게 되고 while문이 종료되게 됨. 마지막으로 consumer에서 queue에 남아있는 데이터들을 소진시키고 종료.)
+- 멀티프로세스에서 데이터통신
+    - queue를 이용한 데이터 통신
+        ```python
+        from multiprocessing import Process, Queue, current_process
+        import time
+        import os
+
+        # 실행 함수
+        def worker(id, baseNum, q):
+
+            process_id = os.getpid()
+            process_name = current_process().name
+
+            # 누적
+            sub_total = 0
+
+            # 계산
+            for i in range(baseNum):
+                sub_total += 1
+
+            # Produce
+            q.put(sub_total)
+
+            # 정보 출력
+            print(f"Process ID: {process_id}, Process Name: {process_name}")
+            print(f"Result : {sub_total}")
+
+        def main():
+
+            # 부모 프로세스 아이디
+            parent_process_id = os.getpid()
+            # 출력
+            print(f"Parent process ID {parent_process_id}")
+
+            # 프로세스 리스트  선언
+            processes = list()
+
+            # 시작 시간
+            start_time = time.time()
+
+            # Queue 선언
+            q = Queue()
+
+             # 프로세스 생성 및 실행
+            for i in range(2): # 1 ~ 100 적절히 조절
+                # 생성
+                t = Process(name=str(i), target=worker, args=(1, 100000000, q))
+
+                # 배열에 담기
+                processes.append(t)
+
+                # 시작
+                t.start()
+
+            # Join
+            for process in processes:
+                process.join()
+
+            # 순수 계산 시간
+            print("--- %s seconds ---" % (time.time() - start_time))
+
+            # 종료 플래그
+            q.put('exit')
+
+            total = 0
+
+            # 대기
+            while True:
+                tmp = q.get()
+                if tmp == 'exit':
+                    break
+                else:
+                    total += tmp
+
+            print()
+
+            print("Main-Processing Total_count={}".format(total))
+            print("Main-Processing Done!")
+
+        # 마찬가지로 Pipe 사용법은 링크 별도 첨부 예제 참조
+        # https://docs.python.org/3/library/multiprocessing.html#exchanging-objects-between-processes
+
+        if __name__ == "__main__":
+            main()
+        '''
+        Parent process ID 752803
+        Process ID: 752808, Process Name: 1
+        Result : 100000000
+        Process ID: 752807, Process Name: 0
+        Result : 100000000
+        --- 2.182882070541382 seconds ---
+
+        Main-Processing Total_count=200000000
+        Main-Processing Done!
+        '''
+        ```
+    ` pipe를 이용한 데이터 통신(
+        ```python
+        from multiprocessing import Process, Pipe, current_process
+        import time
+        import os
+
+        # 실행 함수
+        def worker(id, baseNum, conn):
+
+            process_id = os.getpid()
+            process_name = current_process().name
+
+            # 누적
+            sub_total = 0
+
+            # 계산
+            for _ in range(baseNum):
+                sub_total += 1
+
+            # Produce
+            conn.send(sub_total)
+            conn.close()
+
+            # 정보 출력
+            print(f"Process ID: {process_id}, Process Name: {process_name}")
+            print(f"Result : {sub_total}")
+
+        def main():
+
+            # 부모 프로세스 아이디
+            parent_process_id = os.getpid()
+            # 출력
+            print(f"Parent process ID {parent_process_id}")
+
+            # 시작 시간
+            start_time = time.time()
+
+            # Pipe 선언
+            parent_conn, child_conn = Pipe()
+
+             # 프로세스 생성 및 실행
+
+            # 생성
+            t = Process(target=worker, args=(1, 100000000, child_conn))
+
+            # 시작
+            t.start()
+
+            # Join
+            t.join()
+
+            # 순수 계산 시간
+            print("--- %s seconds ---" % (time.time() - start_time))
+
+            print()
+
+            print("Main-Processing : {}".format(parent_conn.recv()))
+            print("Main-Processing Done!")
+
+        if __name__ == "__main__":
+            main()
+        '''
+        Parent process ID 753949
+        Process ID: 753953, Process Name: Process-1
+        Result : 100000000
+        --- 2.0745906829833984 seconds ---
+
+        Main-Processing : 100000000
+        Main-Processing Done!
+        '''
+        ```
+        
 
 #### References
 - [우리를 위한 프로그래밍 : 파이썬 중급](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%A4%91%EA%B8%89-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90)
