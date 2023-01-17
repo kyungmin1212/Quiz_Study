@@ -21,6 +21,7 @@
 - [multi threading / multi processing](#19)
 - [CPU Bound vs I/O Bound (Multiprocessing vs Threading vs AsyncIO) (cf. Concurrency(동시성) vs Parallelism(병렬성) // Blocking IO vs Non-Blocking IO // Sync vs ASync)](#20)
 - [hasattr / getattr / setattr](#21)
+- [시간 표현 방법(time, datetime, pytz)](#22)
 ---
 
 ## #1
@@ -3025,10 +3026,10 @@
         - 제어권(IO작업) -> 유저 프로세스 전달 -> 다른 작업 수행 가능(지속) -> 주기적 시스템 콜 통해서 IO 작업 완료 여부 확인
 
 - Async vs Sync
-    - Async 
-        - system call의 완료를 기다리지 않으면 Asynchronous
-    - Sync
-        - system call의 완료를 기다리면 synchronous
+    - Async(비동기)
+        - system call의 완료를 기다리지 않으면 Asynchronous(기다리지 않고 완료되면 알아서 커널에서 답장이 옴(Call back))
+    - Sync(동기)
+        - system call의 완료를 기다리면 synchronous(기다리면서 끝났는지 계속 체크를 해야함)
 
 - Blocking, Non-blocking, Asynchronous, Synchronous의 명백한 비교
     - 블로킹 Blocking
@@ -3039,8 +3040,18 @@
         - A 함수가 B 함수를 호출 할 때, B 함수의 결과를 A 함수가 처리하는 것.
     - 비동기 Asynchronous
         - A 함수가 B 함수를 호출 할 때, B 함수의 결과를 B 함수가 처리하는 것. (callback)
-
-
+    - Sync-Blocking / Async-NonBlocking    
+        ![](./img/blocking_nonblocking_async_sync.jpg)    
+        - Sync-Blocking과 Async-NonBlocking는 우리가 흔하게 접하고 있으므로 그림으로 충분히 이해가능
+        - Async-NonBlokcing이 많이 사용되고 중요함(Sync-NonBlocking과 비슷해보이는데 Sync-NonBlocking은 호출한 함수가 끝났는지 호출한쪽에서 계속 확인해야하는것이고, Async는 Callback을 사용해서 호출한함수가 끝나면 알아서 커널에서 답장이 옴)    
+        - Async-NonBlocking은 빨래를 돌려놓고 맘편히 다른것을 하고 있어도됨. 알아서 메시지가 도착해서 알려줌.
+        - Sync-NonBlocking은 빨래를 돌려놓고 내가 계속해서 끝났는지 확인을 해야함. 다른일을 하면서도 중간에 확인을 해야함
+    - Sync-NonBlocking    
+        ![](./img/blocking_nonblocking_async_sync1.jpg)    
+        - B함수가 바로 제어권을 돌려주기에 A함수는 다른 작업을 수행할 수 있지만, 언제 종료되는지 알 수 없는 B함수의 종료를 A함수가 확인해야함(=A함수가 직접 결과를 처리해야하는 상황이기에 B함수의 종료를 반복적으로 물어봐야함)
+    - Async-Blocking    
+        ![](./img/blocking_nonblocking_async_sync2.jpg)    
+        - 굉장히 비효율적인 모델
 - async IO는 코루틴(Coroutine)작업을 쉽게 할 수 있게 만들어 놓은 것
 
 - [코루틴](#17) 참고
@@ -3048,7 +3059,7 @@
 
 #### References
 - [고수가 되는 파이썬 : 동시성과 병렬성 문법 배우기](https://www.inflearn.com/course/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-%ED%8C%8C%EC%9D%B4%EC%8D%AC-%EC%99%84%EC%84%B1-%EC%9D%B8%ED%94%84%EB%9F%B0-%EC%98%A4%EB%A6%AC%EC%A7%80%EB%84%90/dashboard)
-- https://jh-7.tistory.com/25
+- https://homoefficio.github.io/2017/02/19/Blocking-NonBlocking-Synchronous-Asynchronous/
 ---
 
 ## #21
@@ -3090,7 +3101,197 @@
 
 ---
 
+## #22
 
+### 시간 표현 방법(time, datetime, pytz)
+- 지역 시간에는 time보다 datetime을 사용하기
+- 시간 기준
+    - 협정 세계시(Coordinated Universal Time, UTC)
+    - 유닉스 기준 시간이후 몇 초가 흘렀는지(Timestamp)
+- 일반적으로 우리가 사용하는 시간은 UTC기준 +9 (한국기준) 몇시 이렇게 표현(지역별로 표현 방식이 달라짐)    
+    (지역별로 UTC는 모두 동일한거임. UTC는 기준점. 단 UTC기준 +9시 이런식으로 몇시간 더 늘어났다를 그지역 시간옆에 표시를 해줌)    
+    (마찬가지로 Timestamp도 모든 지역에서 동일하게 표현됨)
+- 전세계 공통된 시간인 UTC와 Timestamp를 그 지역시간으로 맞춰주기 위해서는 변환작업 필요함
+- 변환 작업에는 time이나 datetime 사용 가능
+    - time모듈은 호스트 운영체제에 따라 다르게 작동할수가 있으므로 time모듈을 신뢰할수 없음(여러 시간대에서 time 모듈이 일관성 있게 동작한다고 보장할 수 없음)(그 컴퓨터 지역 시간에 맞춰서 변경됨)
+    - 여러시간대를 다뤄야 하는 경우에는 time 모듈을 사용하면 안됨.
+    - 여러 시간대 사이의 변환을 다룬다면 datetime 모듈을 사용하기
+- 시간이 혼동되지 않게 하기 위해서는 항상 UTC로 변경한뒤에 UTC값에 대해 필요로 하는 datetime 연산을 수행하기. 그 후에 마지막으로 UTC를 지역 시간으로 변경
+    - 샌프란시스코의 비행기 도착시간을 한국,네팔 시간 기준으로 언제 도착시간을 의미하는지를 변경해보기
+        ```python
+        from datetime import datetime
+        import pytz
+
+        arrival_sf = '2022-12-12 12:12:12'
+
+        dt_arrival_sf = datetime.strptime(arrival_sf,'%Y-%m-%d %H:%M:%S') # 우선 datetime형태로 변경
+
+        eastern = pytz.timezone('US/Pacific')
+        korea = pytz.timezone('Asia/Seoul')
+        nepal = pytz.timezone('Asia/Katmandu')
+
+        ## 우선 arrival_sf 시간이 샌프란시스코 기준시간이라는 것을 설정해주기
+        sf_dt = eastern.localize(dt_arrival_sf) # 그 시간 그대로 사용하고 싶을 경우는 localize
+        print(sf_dt)
+
+        ## 샌프란시스코 기준시간을 UTC 데이터로 변경하기
+        utc_dt = pytz.utc.normalize(sf_dt.astimezone(pytz.utc)) # 어떤 시간을 내시간대로 맞춰서 변경시키고 싶으면 normalize
+        # utc_dt = pytz.utc.normalize(sf_dt.astimezone(pytz.utc)) # 같은말  
+        print(utc_dt)
+
+        korea_dt = korea.normalize(utc_dt.astimezone(korea)) 
+        # korea_dt = korea.normalize(sf_dt.astimezone(korea)) # 같은말 
+        print(korea_dt)
+
+        nepal_dt = nepal.normalize(utc_dt.astimezone(nepal))
+        # nepal_dt = nepal.normalize(sf_dt.astimezone(nepal)) # 같은말
+        # nepal_dt = nepal.normalize(korea_dt.astimezone(nepal)) # 같은말
+        # localize가 적용된 시간에 normalize를 시켜주면 자동적으로 시간대를 기억해줌. 따라서 그 시간대를 기준으로 astimezone을 하게 되면 시간에 맞춰서 또 알아서 자동 변환됨
+        print(nepal_dt)
+        print(type(utc_dt))
+
+        ## 주의할 점 : timezone이 설정되어져 있더라도 time.mktime를 하게되면 timestamp는 timezone 설정시간과 관계없이 그 시간 자체를 Timestamp로 변경시켜줌. (time 모듈은 그 호스트 컴퓨터의 시간대에 맞는 지역 시간을 맞춰서 알아서 Timestamp로 변경시켜줌. 즉 우리가 설정한 시간은 아무런 의미가 없고 그냥 입력된 시간을 컴퓨터 시간대에 맞춰서 timestamp로 변경)
+        print(time.mktime(utc_dt.timetuple()))
+        print(time.mktime(korea_dt.timetuple()))
+        print(time.mktime(nepal_dt.timetuple()))
+        '''
+        2022-12-12 12:12:12-08:00
+        2022-12-12 20:12:12+00:00
+        2022-12-13 05:12:12+09:00
+        2022-12-13 01:57:12+05:45
+        <class 'datetime.datetime'>
+        1670843532.0
+        1670875932.0
+        1670864232.0
+        '''
+        ```
+    - 위 예시에서 localize를 하지 않을경우 -> localize 시간은 그지역 컴퓨터 시간으로 설정되어져있음
+        ```python
+        from datetime import datetime
+        import pytz
+
+        arrival_sf = '2022-12-12 12:12:12'
+
+        dt_arrival_sf = datetime.strptime(arrival_sf,'%Y-%m-%d %H:%M:%S') # 우선 datetime형태로 변경
+
+        eastern = pytz.timezone('US/Pacific')
+        korea = pytz.timezone('Asia/Seoul')
+        nepal = pytz.timezone('Asia/Katmandu')
+
+        # ## 우선 arrival_sf 시간이 샌프란시스코 기준시간이라는 것을 설정해주기
+        # sf_dt = eastern.localize(dt_arrival_sf) # 그 시간 그대로 사용하고 싶을 경우는 localize
+        # print(sf_dt)
+
+        ## 샌프란시스코 기준시간을 UTC 데이터로 변경하기
+        utc_dt = pytz.utc.normalize(dt_arrival_sf.astimezone(pytz.utc)) # 어떤 시간을 내시간대로 맞춰서 변경시키고 싶으면 normalize
+        print(utc_dt)
+
+        korea_dt = korea.normalize(dt_arrival_sf.astimezone(korea))
+        print(korea_dt)
+
+        nepal_dt = nepal.normalize(dt_arrival_sf.astimezone(nepal))
+        print(nepal_dt)
+        '''
+        2022-12-12 03:12:12+00:00
+        2022-12-12 12:12:12+09:00
+        2022-12-12 08:57:12+05:45
+        '''
+        ```
+- timestamp <-> 특정 지역 시간
+    - 특정시간 -> timestamp (특정시간은 그 컴퓨터 시간에 맞춰서 알아서 변경됨)
+        ```python
+        import datetime
+        import time
+
+        str_dt = '2023-01-18 03:22:42'
+
+        dt = datetime.datetime.strptime(str_dt,'%Y-%m-%d %H:%M:%S')
+        ts = time.mktime(dt.timetuple())
+
+        print(dt)
+        print(type(dt))
+        print(ts)
+        print(type(ts))
+        '''
+        2023-01-18 03:22:42
+        <class 'datetime.datetime'>
+        1673979762.0
+        <class 'float'>
+        '''
+        ```
+    - timestamp -> 특정시간
+        - utc로 변경하고 싶은 경우
+            ```python
+            import datetime
+
+            def get_date(mili_time):
+                dt = datetime.datetime.utcfromtimestamp(mili_time / 1000.0)
+                timeline = str(dt.strftime('%Y-%m-%d %H:%M:%S'))  #(1) 출력형식 지정
+                return timeline
+
+            get_date(1673979762000)
+            '''
+            '2023-01-17 18:22:42'
+            '''
+            ```
+        - 한국시간으로 변경하고 싶은 경우 (fromtimestamp는 컴퓨터 시간에 맞춰짐)
+            ```python
+            import datetime
+
+            def get_date(mili_time):
+                dt = datetime.datetime.fromtimestamp(mili_time / 1000.0)
+                timeline = str(dt.strftime('%Y-%m-%d %H:%M:%S'))  #(1) 출력형식 지정
+                return timeline
+
+            get_date(1673979762000)
+            '''
+            '2023-01-18 03:22:42'
+            '''
+            ```
+        - 더 정확하게 지역시간으로 변경하고 싶은 경우
+            ```python
+            import datetime
+            import pytz
+
+            def get_date(mili_time):
+                utc_dt = datetime.datetime.utcfromtimestamp(mili_time / 1000.0)
+                utc_dt = pytz.utc.localize(utc_dt) # utc_df가 utc시 시간이라는것을 지정해주기 # 안해주면 컴퓨터 환경마다 시간이 다달라져서 다른 결과 값이 나올수 있음(localize가 그 지역 시간으로 되어져있음)
+
+                korea = pytz.timezone('Asia/Seoul')
+                korea_dt = korea.normalize(utc_dt.astimezone(korea))
+
+                timeline = str(korea_dt.strftime('%Y-%m-%d %H:%M:%S'))  #(1) 출력형식 지정
+                return timeline
+
+            get_date(1673979762000)
+            '''
+            '2023-01-18 03:22:42'
+            '''
+            ```
+            - 참고 localize 안한 경우 -> utcfromtimestamp를 통해 utc 시간을 가져왔지만 localize가 되어져 있지 않아서 utc 시간이 한국시간으로 인식되어서 그시간 그대로 나오게됨 (원래는 +9 시간이 되어져야 하는데 utc시간이 나와버림)
+                ```python
+                import datetime
+                import pytz
+
+                def get_date(mili_time):
+                    utc_dt = datetime.datetime.utcfromtimestamp(mili_time / 1000.0)
+                #     utc_dt = pytz.utc.localize(utc_dt) # utc_df가 utc시 시간이라는것을 
+
+                    korea = pytz.timezone('Asia/Seoul')
+                    korea_dt = korea.normalize(utc_dt.astimezone(korea)) # utc_dt가 한국시간으로 인식 (localize를 안했기 때문)
+
+                    timeline = str(korea_dt.strftime('%Y-%m-%d %H:%M:%S'))  #(1) 출력형식 지정
+                    return timeline
+
+                get_date(1673979762000)
+                '''
+                '2023-01-17 18:22:42'
+                '''
+                ```
+#### References
+- [파이썬 코딩의 기술(개정2판)](http://www.yes24.com/Product/Goods/94197582)
+
+---
 ## #100
 
 ### subprocess(자식프로세스 관리)
