@@ -3288,6 +3288,54 @@
                 '2023-01-17 18:22:42'
                 '''
                 ```
+
+- datetime <-> str
+    ```python
+    import datetime
+
+    dt = datetime.datetime.now()
+    print(dt)
+    print(type(dt))
+    '''
+    2023-01-18 03:04:52.248333
+    <class 'datetime.datetime'>
+    '''
+    ```
+    - datetime은 특정 datetime.datetime이라는 클래스이기때문에 str형태로 변경시켜주기 위한 작업이 필요.
+        ```python
+        import datetime
+
+        str_dt = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(str_dt)
+        print(type(str_dt))
+
+        # 원하는 형태로 출력가능(단 %Y,%m 등이 뭘 의미하는지 알아야함)
+        str_dt = datetime.datetime.now().strftime('%Y-%m-%d %H')
+        print(str_dt)
+        print(type(str_dt))
+        '''
+        2023-01-18 03:08:37
+        <class 'str'>
+        2023-01-18 03
+        <class 'str'>
+        '''
+        ```
+    - 반대로 str형태의 데이터를 datetime.datetime으로 변경하는 작업도 존재
+        ```python
+        import datetime
+
+        str_dt = '2023-01-18 03:00:00'
+
+        # str_dt에 있는 값들이 어떤것을 의미하는지 %Y %m 등으로 지정해주어야함
+        dt = datetime.datetime.strptime(str_dt,'%Y-%m-%d %H:%M:%S')
+        print(dt)
+        print(type(dt))
+        '''
+        2023-01-18 03:00:00
+        <class 'datetime.datetime'>
+        '''
+        ```
+
 #### References
 - [파이썬 코딩의 기술(개정2판)](http://www.yes24.com/Product/Goods/94197582)
 
